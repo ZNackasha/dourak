@@ -3,12 +3,21 @@ import { generateSchedule, SchedulerShift, SchedulerUser } from "./scheduler";
 
 describe("Complex Schedule Scenario", () => {
   // Roles
-  const roleNursery = "Nursery";
-  const roleKidsWorship = "Kids Worship";
-  const rolePreschool = "Preschool";
-  const roleElementary = "Elementary";
-  const roleMiddleSchool = "Middle School";
-  const roleWorship = "Worship";
+  const roles = {
+    nursery: { roleId: "Nursery", type: "required" as const },
+    kidsWorship: { roleId: "Kids Worship", type: "required" as const },
+    preschool: { roleId: "Preschool", type: "required" as const },
+    elementary: { roleId: "Elementary", type: "required" as const },
+    middleSchool: { roleId: "Middle School", type: "optional" as const },
+    worshipLeader: { roleId: "Worship Leader", type: "optional" as const },
+    baseGuitar: { roleId: "Base Guitar", type: "optional" as const },
+    electricGuitar: { roleId: "Electric Guitar", type: "optional" as const },
+    acousticGuitar: { roleId: "Acoustic Guitar", type: "optional" as const },
+    keyboard: { roleId: "Keyboard", type: "optional" as const },
+    drums: { roleId: "Drums", type: "optional" as const },
+    piano: { roleId: "Piano", type: "optional" as const },
+    vocals: { roleId: "Vocals", type: "optional" as const },
+  } as const;
 
   // Dates
   const date07 = "2025-12-07";
@@ -18,100 +27,120 @@ describe("Complex Schedule Scenario", () => {
 
   // Users
   const users: SchedulerUser[] = [
-    { id: "Leila Alhindi", roleIds: [roleNursery], availableEvents: [] },
+    { id: "Leila Alhindi", roles: [roles.nursery], availableEvents: [] },
     {
       id: "Lillian Nackasha",
-      roleIds: [roleNursery, roleKidsWorship],
+      roles: [roles.nursery, roles.kidsWorship],
       availableEvents: [date14, date28],
     },
     {
       id: "Rebecca Yonan",
-      roleIds: [
-        roleNursery,
-        roleKidsWorship,
-        roleElementary,
-        roleMiddleSchool,
-        roleWorship,
+      roles: [
+        roles.nursery,
+        roles.kidsWorship,
+        roles.elementary,
+        roles.middleSchool,
+        roles.vocals,
       ],
       availableEvents: [date14, date21, date28],
     },
     {
       id: "Shams Morolli",
-      roleIds: [roleNursery, roleKidsWorship, roleMiddleSchool, roleWorship],
+      roles: [
+        roles.nursery,
+        roles.kidsWorship,
+        roles.middleSchool,
+        roles.vocals,
+      ],
       availableEvents: [],
     },
-    { id: "Shantal AlNajar", roleIds: [roleNursery], availableEvents: [] },
+    { id: "Shantal AlNajar", roles: [roles.nursery], availableEvents: [] },
     {
       id: "Marianne Salman",
-      roleIds: [roleNursery, rolePreschool, roleElementary, roleMiddleSchool],
+      roles: [
+        roles.nursery,
+        roles.preschool,
+        roles.elementary,
+        roles.middleSchool,
+      ],
       availableEvents: [date14, date28],
     },
     {
       id: "Christa Kasbrooks",
-      roleIds: [roleKidsWorship, roleWorship],
+      roles: [roles.kidsWorship, roles.vocals],
       availableEvents: [],
     },
     {
       id: "Nada Yousif",
-      roleIds: [roleKidsWorship, roleElementary],
+      roles: [roles.kidsWorship, roles.elementary],
       availableEvents: [],
     },
     {
       id: "Nana Akrawi",
-      roleIds: [roleKidsWorship, roleElementary],
+      roles: [roles.kidsWorship, roles.elementary],
       availableEvents: [],
     },
     {
       id: "Zina Hannah",
-      roleIds: [roleKidsWorship, rolePreschool, roleMiddleSchool],
+      roles: [roles.kidsWorship, roles.preschool, roles.middleSchool],
       availableEvents: [date21, date28],
     },
     {
       id: "Christine Awabdeh",
-      roleIds: [rolePreschool],
+      roles: [roles.preschool],
       availableEvents: [date14],
     },
-    { id: "Gracie Fram", roleIds: [rolePreschool], availableEvents: [date07] },
+    { id: "Gracie Fram", roles: [roles.preschool], availableEvents: [date07] },
     {
       id: "Mikayla Hannah",
-      roleIds: [rolePreschool],
+      roles: [roles.preschool],
       availableEvents: [date21],
     },
     {
       id: "Ricky Kasbrooks",
-      roleIds: [rolePreschool, roleElementary, roleMiddleSchool],
+      roles: [roles.preschool, roles.elementary, roles.middleSchool],
       availableEvents: [],
     },
     {
       id: "Sally Haddad",
-      roleIds: [roleElementary],
+      roles: [roles.elementary],
       availableEvents: [date14],
     },
-    { id: "Dalia Jamil", roleIds: [roleMiddleSchool], availableEvents: [] },
-    { id: "Erica Kaspo", roleIds: [roleMiddleSchool], availableEvents: [] },
-    { id: "Manny Salman", roleIds: [roleMiddleSchool], availableEvents: [] },
-    { id: "Alex Kaspo", roleIds: [roleWorship], availableEvents: [] },
+    { id: "Dalia Jamil", roles: [roles.middleSchool], availableEvents: [] },
+    { id: "Erica Kaspo", roles: [roles.middleSchool], availableEvents: [] },
+    { id: "Manny Salman", roles: [roles.middleSchool], availableEvents: [] },
+    { id: "Alex Kaspo", roles: [roles.drums], availableEvents: [] },
     {
       id: "Andrew Awabdeh",
-      roleIds: [roleWorship],
+      roles: [roles.worshipLeader, roles.keyboard, roles.vocals],
       availableEvents: [date07, date14, date21, date28],
     },
     {
       id: "Anthony Morolli",
-      roleIds: [roleWorship],
+      roles: [roles.baseGuitar],
       availableEvents: [date07, date14, date21, date28],
     },
-    { id: "Hashem Alfay", roleIds: [roleWorship], availableEvents: [] },
-    { id: "Jamil Haddad", roleIds: [roleWorship], availableEvents: [] },
-    { id: "Jeremy Ishow", roleIds: [roleWorship], availableEvents: [] },
+    { id: "Hashem Alfay", roles: [roles.acousticGuitar], availableEvents: [] },
+    { id: "Jamil Haddad", roles: [roles.acousticGuitar], availableEvents: [] },
+    { id: "Jeremy Ishow", roles: [roles.drums], availableEvents: [] },
     {
       id: "Jonah Yonan",
-      roleIds: [roleWorship],
+      roles: [
+        roles.vocals,
+        roles.electricGuitar,
+        roles.piano,
+        roles.keyboard,
+        roles.worshipLeader,
+      ],
       availableEvents: [date07, date14, date21, date28],
     },
-    { id: "Nicole Said", roleIds: [roleWorship], availableEvents: [] },
-    { id: "Rabi Alhindi", roleIds: [roleWorship], availableEvents: [] },
-    { id: "Razan Yared", roleIds: [roleWorship], availableEvents: [] },
+    { id: "Nicole Said", roles: [roles.vocals], availableEvents: [] },
+    {
+      id: "Rabi Alhindi",
+      roles: [roles.vocals, roles.acousticGuitar],
+      availableEvents: [],
+    },
+    { id: "Razan Yared", roles: [roles.vocals], availableEvents: [] },
   ];
 
   // Helper to create shifts with proper time ranges
@@ -147,17 +176,31 @@ describe("Complex Schedule Scenario", () => {
 
   // Helper functions for each role type
   const createNurseryShift = (dateStr: string, index: number = 0) =>
-    createShift(dateStr, roleNursery, 12, 0, 13, 0, index);
+    createShift(dateStr, roles.nursery.roleId, 12, 0, 13, 0, index);
   const createKidsWorshipShift = (dateStr: string, index: number = 0) =>
-    createShift(dateStr, roleKidsWorship, 12, 0, 12, 30, index);
+    createShift(dateStr, roles.kidsWorship.roleId, 12, 0, 12, 30, index);
   const createPreschoolShift = (dateStr: string, index: number = 0) =>
-    createShift(dateStr, rolePreschool, 12, 30, 13, 0, index);
+    createShift(dateStr, roles.preschool.roleId, 12, 30, 13, 0, index);
   const createElementaryShift = (dateStr: string, index: number = 0) =>
-    createShift(dateStr, roleElementary, 12, 30, 13, 0, index);
+    createShift(dateStr, roles.elementary.roleId, 12, 30, 13, 0, index);
   const createMiddleSchoolShift = (dateStr: string, index: number = 0) =>
-    createShift(dateStr, roleMiddleSchool, 12, 30, 13, 0, index);
-  const createWorshipShift = (dateStr: string, index: number = 0) =>
-    createShift(dateStr, roleWorship, 12, 0, 12, 30, index);
+    createShift(dateStr, roles.middleSchool.roleId, 12, 30, 13, 0, index);
+  const createWorshipLeaderShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.worshipLeader.roleId, 12, 0, 12, 30, index);
+  const createVocalsShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.vocals.roleId, 12, 0, 12, 30, index);
+  const createDrumsShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.drums.roleId, 12, 0, 12, 30, index);
+  const createBaseGuitarShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.baseGuitar.roleId, 12, 0, 12, 30, index);
+  const createElectricGuitarShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.electricGuitar.roleId, 12, 0, 12, 30, index);
+  const createAcousticGuitarShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.acousticGuitar.roleId, 12, 0, 12, 30, index);
+  const createKeyboardShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.keyboard.roleId, 12, 0, 12, 30, index);
+  const createPianoShift = (dateStr: string, index: number = 0) =>
+    createShift(dateStr, roles.piano.roleId, 12, 0, 12, 30, index);
 
   it("should generate a schedule for December 2025", () => {
     const shifts: SchedulerShift[] = [
@@ -167,9 +210,14 @@ describe("Complex Schedule Scenario", () => {
       createPreschoolShift(date07),
       createElementaryShift(date07),
       createMiddleSchoolShift(date07),
-      createWorshipShift(date07, 0),
-      createWorshipShift(date07, 1),
-      createWorshipShift(date07, 2),
+      createWorshipLeaderShift(date07),
+      createVocalsShift(date07),
+      createDrumsShift(date07),
+      createBaseGuitarShift(date07),
+      createElectricGuitarShift(date07),
+      createAcousticGuitarShift(date07),
+      createKeyboardShift(date07),
+      createPianoShift(date07),
 
       // 12-14
       createNurseryShift(date14),
@@ -177,9 +225,14 @@ describe("Complex Schedule Scenario", () => {
       createPreschoolShift(date14),
       createElementaryShift(date14),
       createMiddleSchoolShift(date14),
-      createWorshipShift(date14, 0),
-      createWorshipShift(date14, 1),
-      createWorshipShift(date14, 2),
+      createWorshipLeaderShift(date14),
+      createVocalsShift(date14),
+      createDrumsShift(date14),
+      createBaseGuitarShift(date14),
+      createElectricGuitarShift(date14),
+      createAcousticGuitarShift(date14),
+      createKeyboardShift(date14),
+      createPianoShift(date14),
 
       // 12-21 (No Middle School)
       createNurseryShift(date21),
@@ -187,9 +240,14 @@ describe("Complex Schedule Scenario", () => {
       createPreschoolShift(date21),
       createElementaryShift(date21),
       // No Middle School
-      createWorshipShift(date21, 0),
-      createWorshipShift(date21, 1),
-      createWorshipShift(date21, 2),
+      createWorshipLeaderShift(date21),
+      createVocalsShift(date21),
+      createDrumsShift(date21),
+      createBaseGuitarShift(date21),
+      createElectricGuitarShift(date21),
+      createAcousticGuitarShift(date21),
+      createKeyboardShift(date21),
+      createPianoShift(date21),
 
       // 12-28
       createNurseryShift(date28),
@@ -197,39 +255,57 @@ describe("Complex Schedule Scenario", () => {
       createPreschoolShift(date28),
       createElementaryShift(date28),
       createMiddleSchoolShift(date28),
-      createWorshipShift(date28, 0),
-      createWorshipShift(date28, 1),
-      createWorshipShift(date28, 2),
+      createWorshipLeaderShift(date28),
+      createVocalsShift(date28),
+      createDrumsShift(date28),
+      createBaseGuitarShift(date28),
+      createElectricGuitarShift(date28),
+      createAcousticGuitarShift(date28),
+      createKeyboardShift(date28),
+      createPianoShift(date28),
     ];
 
     const results = generateSchedule(shifts, users);
 
     // Analyze results
-    const assignmentsByDate = results.reduce((acc, curr) => {
-      const date = curr.shiftId.split("-").slice(1, 4).join("-");
-      if (!acc[date]) acc[date] = [];
-      acc[date].push(curr);
-      return acc;
-    }, {} as Record<string, typeof results>);
-
     console.log("\n=== SCHEDULE RESULTS ===");
     console.log("Total Assignments:", results.length);
     console.log("\nAssignments by Date:");
-    Object.keys(assignmentsByDate)
-      .sort()
-      .forEach((date) => {
-        console.log(`\n${date}:`);
-        assignmentsByDate[date].forEach((a) => {
-          const shift = shifts.find((s) => s.id === a.shiftId);
-          const startTime = shift?.start.toISOString().substring(11, 16);
-          const endTime = shift?.end.toISOString().substring(11, 16);
+
+    const dates = Array.from(
+      new Set(shifts.map((s) => s.id.split("-").slice(1, 4).join("-")))
+    ).sort();
+
+    dates.forEach((date) => {
+      console.log(`\n${date}:`);
+      const shiftsForDate = shifts.filter((s) => s.id.includes(date));
+
+      shiftsForDate.forEach((shift) => {
+        const assignment = results.find((r) => r.shiftId === shift.id);
+        const startTime = shift.start.toISOString().substring(11, 16);
+        const endTime = shift.end.toISOString().substring(11, 16);
+
+        // Find role definition
+        const roleDef = Object.values(roles).find(
+          (r) => r.roleId === shift.roleId
+        );
+        const isRequired = roleDef?.type === "required";
+
+        if (assignment) {
           console.log(
-            `  ${a.userId} -> ${
-              a.shiftId.split("-")[0]
-            } (${startTime}-${endTime})`
+            `  ✅ ${assignment.userId} -> ${shift.roleId} (${startTime}-${endTime})`
           );
-        });
+        } else if (isRequired) {
+          console.log(
+            `  ❌ MISSING REQUIRED: ${shift.roleId} (${startTime}-${endTime})`
+          );
+        } else {
+          console.log(
+            `  ⚪ Unfilled Optional: ${shift.roleId} (${startTime}-${endTime})`
+          );
+        }
       });
+    });
 
     // Basic assertions
     expect(results.length).toBeGreaterThan(0);

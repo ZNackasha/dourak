@@ -5,11 +5,20 @@ describe("Scheduler Algorithm", () => {
   const roleGuitar = "role-guitar";
   const roleDrums = "role-drums";
 
-  const userGuitarist: SchedulerUser = { id: "u1", roleIds: [roleGuitar] };
-  const userDrummer: SchedulerUser = { id: "u2", roleIds: [roleDrums] };
+  const userGuitarist: SchedulerUser = {
+    id: "u1",
+    roles: [{ roleId: roleGuitar, type: "required" }],
+  };
+  const userDrummer: SchedulerUser = {
+    id: "u2",
+    roles: [{ roleId: roleDrums, type: "required" }],
+  };
   const userMulti: SchedulerUser = {
     id: "u3",
-    roleIds: [roleGuitar, roleDrums],
+    roles: [
+      { roleId: roleGuitar, type: "required" },
+      { roleId: roleDrums, type: "required" },
+    ],
   };
 
   const baseTime = new Date("2025-01-01T10:00:00Z");
@@ -97,8 +106,14 @@ describe("Scheduler Algorithm", () => {
     };
 
     // 2 identical users
-    const u1: SchedulerUser = { id: "u1", roleIds: [roleGuitar] };
-    const u2: SchedulerUser = { id: "u2", roleIds: [roleGuitar] };
+    const u1: SchedulerUser = {
+      id: "u1",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+    const u2: SchedulerUser = {
+      id: "u2",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
 
     const result = generateSchedule([shift1, shift2], [u1, u2]);
 
@@ -106,6 +121,31 @@ describe("Scheduler Algorithm", () => {
     // Expect different users assigned if load balancing works
     const assignedUsers = new Set(result.map((r) => r.userId));
     expect(assignedUsers.size).toBe(2);
+  });
+
+  it("should prioritize users with 'required' role over 'optional' role", () => {
+    const shift: SchedulerShift = {
+      id: "s1",
+      roleId: roleGuitar,
+      start: baseTime,
+      end: hourLater,
+      assignments: [],
+    };
+
+    const uRequired: SchedulerUser = {
+      id: "uReq",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+    const uOptional: SchedulerUser = {
+      id: "uOpt",
+      roles: [{ roleId: roleGuitar, type: "optional" }],
+    };
+
+    // Even if optional user comes first in list
+    const result = generateSchedule([shift], [uOptional, uRequired]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].userId).toBe("uReq");
   });
 });
 

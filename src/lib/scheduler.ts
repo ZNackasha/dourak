@@ -6,9 +6,14 @@ export type SchedulerShift = {
   assignments: { userId: string | null; status: string }[];
 };
 
+export type UserRole = {
+  roleId: string;
+  type: "required" | "optional";
+};
+
 export type SchedulerUser = {
   id: string;
-  roleIds: string[];
+  roles: UserRole[];
   availableEvents?: string[]; // ISO Date strings YYYY-MM-DD
 };
 
@@ -58,8 +63,9 @@ export function generateSchedule(
     // Find eligible users
     const eligibleUsers = users.filter((user) => {
       // 1. Must have role (if shift requires one)
-      if (shift.roleId && !user.roleIds.includes(shift.roleId)) {
-        return false;
+      if (shift.roleId) {
+        const hasRole = user.roles.some((r) => r.roleId === shift.roleId);
+        if (!hasRole) return false;
       }
 
       // 2. Must be available on that date
@@ -76,9 +82,22 @@ export function generateSchedule(
     });
 
     if (eligibleUsers.length > 0) {
-      // Strategy: Pick the user with the fewest assignments so far (Load Balancing)
-      // Or just random. Let's do simple load balancing.
+      // Strategy:
+      // 1. Prioritize 'required' roles over 'optional'
+      // 2. Pick the user with the fewest assignments so far (Load Balancing)
       eligibleUsers.sort((a, b) => {
+        // Priority 1: Role Type
+        if (shift.roleId) {
+          const roleA = a.roles.find((r) => r.roleId === shift.roleId);
+          const roleB = b.roles.find((r) => r.roleId === shift.roleId);
+
+          if (roleA?.type === "required" && roleB?.type !== "required")
+            return -1;
+          if (roleB?.type === "required" && roleA?.type !== "required")
+            return 1;
+        }
+
+        // Priority 2: Load Balancing
         const countA = userSchedules.get(a.id)?.length || 0;
         const countB = userSchedules.get(b.id)?.length || 0;
         return countA - countB;
