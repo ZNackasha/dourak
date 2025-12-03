@@ -385,17 +385,28 @@ describe("Complex Schedule Scenario", () => {
         );
         const isRequired = roleDef?.type === "required";
 
+        // Count candidates
+        const candidates = users.filter(
+          (u) =>
+            u.roles.some((r) => r.roleId === event.roleId) &&
+            (!u.availableEvents || u.availableEvents.includes(event.id))
+        );
+
         if (assignment) {
           console.log(
             `  ✅ ${assignment.userId} -> ${event.roleId} (${startTime}-${endTime})`
           );
         } else if (isRequired) {
+          const reason =
+            candidates.length === 0 ? "No candidates" : "Conflict/Optimization";
           console.log(
-            `  ❌ MISSING REQUIRED: ${event.roleId} (${startTime}-${endTime})`
+            `  ❌ MISSING REQUIRED: ${event.roleId} (${startTime}-${endTime}) [${reason}]`
           );
         } else {
+          const reason =
+            candidates.length === 0 ? "No candidates" : "Conflict/Optimization";
           console.log(
-            `  ⚪ Unfilled Optional: ${event.roleId} (${startTime}-${endTime})`
+            `  ⚪ Unfilled Optional: ${event.roleId} (${startTime}-${endTime}) [${reason}]`
           );
         }
       });
