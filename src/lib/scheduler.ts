@@ -1,4 +1,4 @@
-export type SchedulerShift = {
+export type SchedulerEvent = {
   id: string;
   roleId: string | null;
   start: Date;
@@ -14,16 +14,16 @@ export type UserRole = {
 export type SchedulerUser = {
   id: string;
   roles: UserRole[];
-  availableEvents?: string[]; // ISO Date strings YYYY-MM-DD
+  availableEvents?: string[]; // Event IDs
 };
 
 export type ScheduleResult = {
-  shiftId: string;
+  eventId: string;
   userId: string;
 };
 
 export function generateSchedule(
-  shifts: SchedulerShift[],
+  events: SchedulerEvent[],
   users: SchedulerUser[]
 ): ScheduleResult[] {
   const results: ScheduleResult[] = [];
@@ -44,37 +44,36 @@ export function generateSchedule(
   };
 
   // Helper to check availability
-  const isUserAvailable = (user: SchedulerUser, date: Date) => {
+  const isUserAvailable = (user: SchedulerUser, event: SchedulerEvent) => {
     if (!user.availableEvents) return true; // Assume available if not specified
-    const dateString = date.toISOString().split("T")[0];
-    return user.availableEvents.includes(dateString);
+    return user.availableEvents.includes(event.id);
   };
 
-  // Sort shifts by start time to fill earlier ones first
-  const sortedShifts = [...shifts].sort(
+  // Sort events by start time to fill earlier ones first
+  const sortedEvents = [...events].sort(
     (a, b) => a.start.getTime() - b.start.getTime()
   );
 
-  for (const shift of sortedShifts) {
-    // Check if shift is already filled
-    const isFilled = shift.assignments.some((a) => a.status === "CONFIRMED");
+  for (const event of sortedEvents) {
+    // Check if event is already filled
+    const isFilled = event.assignments.some((a) => a.status === "CONFIRMED");
     if (isFilled) continue;
 
     // Find eligible users
     const eligibleUsers = users.filter((user) => {
-      // 1. Must have role (if shift requires one)
-      if (shift.roleId) {
-        const hasRole = user.roles.some((r) => r.roleId === shift.roleId);
+      // 1. Must have role (if event requires one)
+      if (event.roleId) {
+        const hasRole = user.roles.some((r) => r.roleId === event.roleId);
         if (!hasRole) return false;
       }
 
-      // 2. Must be available on that date
-      if (!isUserAvailable(user, shift.start)) {
+      // 2. Must be available for that event
+      if (!isUserAvailable(user, event)) {
         return false;
       }
 
       // 3. Must not be busy
-      if (isUserBusy(user.id, shift.start, shift.end)) {
+      if (isUserBusy(user.id, event.start, event.end)) {
         return false;
       }
 
@@ -87,9 +86,9 @@ export function generateSchedule(
       // 2. Pick the user with the fewest assignments so far (Load Balancing)
       eligibleUsers.sort((a, b) => {
         // Priority 1: Role Type
-        if (shift.roleId) {
-          const roleA = a.roles.find((r) => r.roleId === shift.roleId);
-          const roleB = b.roles.find((r) => r.roleId === shift.roleId);
+        if (event.roleId) {
+          const roleA = a.roles.find((r) => r.roleId === event.roleId);
+          const roleB = b.roles.find((r) => r.roleId === event.roleId);
 
           if (roleA?.type === "required" && roleB?.type !== "required")
             return -1;
@@ -107,13 +106,13 @@ export function generateSchedule(
 
       // Assign
       results.push({
-        shiftId: shift.id,
+        eventId: event.id,
         userId: selectedUser.id,
       });
 
       // Mark busy
       const busy = userSchedules.get(selectedUser.id) || [];
-      busy.push({ start: shift.start, end: shift.end });
+      busy.push({ start: event.start, end: event.end });
       userSchedules.set(selectedUser.id, busy);
     }
   }

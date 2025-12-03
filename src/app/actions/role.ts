@@ -59,6 +59,7 @@ export async function addUserToRoleAction(formData: FormData) {
 
   const email = formData.get("email") as string;
   const roleId = formData.get("roleId") as string;
+  const type = (formData.get("type") as string) || "required";
 
   if (!email || !roleId) throw new Error("Missing fields");
 
@@ -78,6 +79,7 @@ export async function addUserToRoleAction(formData: FormData) {
       data: {
         userId: user.id,
         roleId,
+        type,
       },
     });
   } catch (error) {

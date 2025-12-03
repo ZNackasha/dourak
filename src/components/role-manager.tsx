@@ -47,8 +47,8 @@ export function RoleManager({ roles }: { roles: any[] }) {
               key={role.id}
               onClick={() => setSelectedRoleId(role.id)}
               className={`w-full text-left p-3 rounded-lg border transition-all duration-200 flex items-center justify-between group ${selectedRoleId === role.id
-                  ? "border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500 shadow-sm"
-                  : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-sm"
+                ? "border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500 shadow-sm"
+                : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-sm"
                 }`}
             >
               <div className="flex items-center gap-3">
@@ -61,8 +61,8 @@ export function RoleManager({ roles }: { roles: any[] }) {
                 </span>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full ${selectedRoleId === role.id
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200'
+                ? 'bg-indigo-100 text-indigo-700'
+                : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200'
                 }`}>
                 {role.users.length}
               </span>
@@ -185,20 +185,31 @@ function RoleDetails({ role }: { role: any }) {
             Add Volunteer
           </h3>
           <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-            <form action={addUserToRoleAction} className="flex gap-3">
+            <form action={addUserToRoleAction} className="space-y-3">
               <input type="hidden" name="roleId" value={role.id} />
-              <div className="flex-1">
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="volunteer@example.com"
-                  className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                />
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="volunteer@example.com"
+                    className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <select
+                    name="type"
+                    className="rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="required">Required</option>
+                    <option value="optional">Optional</option>
+                  </select>
+                </div>
+                <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors whitespace-nowrap">
+                  Add Member
+                </button>
               </div>
-              <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors">
-                Add Member
-              </button>
             </form>
           </div>
         </div>
@@ -235,7 +246,15 @@ function RoleDetails({ role }: { role: any }) {
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-medium text-zinc-900">{ur.user.name || "Unknown"}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-zinc-900">{ur.user.name || "Unknown"}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${ur.type === "required"
+                          ? "bg-red-50 text-red-700 border border-red-200"
+                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                          }`}>
+                          {ur.type === "required" ? "Required" : "Optional"}
+                        </span>
+                      </div>
                       <p className="text-xs text-zinc-500">{ur.user.email}</p>
                     </div>
                   </div>

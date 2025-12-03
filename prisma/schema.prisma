@@ -32,6 +32,7 @@ model UserRole {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   roleId String
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  type   String @default("required") // "required" or "optional"
 
   @@id([userId, roleId])
 }
@@ -75,6 +76,7 @@ model VerificationToken {
 model Role {
   id          String   @id @default(cuid())
   name        String   @unique
+  type        String   @default("required") // "required" or "optional"
   description String?
   color       String?  @db.VarChar(12)
   createdAt   DateTime @default(now())
