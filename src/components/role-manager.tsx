@@ -3,7 +3,7 @@
 import { createRoleAction, addUserToRoleAction, removeUserFromRoleAction, updateRoleAction } from "@/app/actions/role";
 import { useState } from "react";
 
-export function RoleManager({ roles }: { roles: any[] }) {
+export function RoleManager({ roles, scheduleId }: { roles: any[], scheduleId: string }) {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
 
   return (
@@ -13,6 +13,7 @@ export function RoleManager({ roles }: { roles: any[] }) {
         <div className="bg-white p-5 rounded-xl shadow-sm border border-zinc-100">
           <h2 className="font-semibold mb-4 text-zinc-900">Create Role</h2>
           <form action={createRoleAction} className="space-y-4">
+            <input type="hidden" name="scheduleId" value={scheduleId} />
             <div>
               <label className="block text-xs font-medium text-zinc-500 mb-1">Role Name</label>
               <input
@@ -21,6 +22,16 @@ export function RoleManager({ roles }: { roles: any[] }) {
                 className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
                 required
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 mb-1">Role Type</label>
+              <select
+                name="type"
+                className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="required">Required (Critical)</option>
+                <option value="optional">Optional (Nice to have)</option>
+              </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-zinc-500 mb-1">Color Label</label>
@@ -121,6 +132,19 @@ function RoleDetails({ role }: { role: any }) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1">
+                  Role Type
+                </label>
+                <select
+                  name="type"
+                  defaultValue={role.type || "required"}
+                  className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="required">Required</option>
+                  <option value="optional">Optional</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">
                   Color Label
                 </label>
                 <div className="flex items-center gap-2">
@@ -163,9 +187,17 @@ function RoleDetails({ role }: { role: any }) {
                 <h2 className="text-2xl font-bold text-zinc-900">
                   {role.name}
                 </h2>
-                <p className="text-sm text-zinc-500">
-                  Manage members for this role
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${role.type === 'optional'
+                    ? 'bg-zinc-50 text-zinc-500 border-zinc-200'
+                    : 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                    }`}>
+                    {role.type === 'optional' ? 'Optional' : 'Required'}
+                  </span>
+                  <p className="text-sm text-zinc-500">
+                    Manage members for this role
+                  </p>
+                </div>
               </div>
             </div>
             <button
@@ -196,15 +228,6 @@ function RoleDetails({ role }: { role: any }) {
                     className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
                     required
                   />
-                </div>
-                <div>
-                  <select
-                    name="type"
-                    className="rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="required">Required</option>
-                    <option value="optional">Optional</option>
-                  </select>
                 </div>
                 <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors whitespace-nowrap">
                   Add Member
@@ -248,12 +271,6 @@ function RoleDetails({ role }: { role: any }) {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-zinc-900">{ur.user.name || "Unknown"}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${ur.type === "required"
-                          ? "bg-red-50 text-red-700 border border-red-200"
-                          : "bg-blue-50 text-blue-700 border border-blue-200"
-                          }`}>
-                          {ur.type === "required" ? "Required" : "Optional"}
-                        </span>
                       </div>
                       <p className="text-xs text-zinc-500">{ur.user.email}</p>
                     </div>

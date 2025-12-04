@@ -25,6 +25,7 @@ model User {
   schedules      Schedule[]
   assignments    Assignment[]
   roles          UserRole[]
+  adminSchedules ScheduleAdmin[]
 }
 
 model UserRole {
@@ -75,7 +76,7 @@ model VerificationToken {
 
 model Role {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String
   type        String   @default("required") // "required" or "optional"
   description String?
   color       String?  @db.VarChar(12)
@@ -83,6 +84,11 @@ model Role {
   updatedAt   DateTime @updatedAt
   shifts      Shift[]
   users       UserRole[]
+  
+  scheduleId  String?
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, name])
 }
 
 model Schedule {
@@ -94,6 +100,8 @@ model Schedule {
   userId           String
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   events           CalendarEvent[]
+  roles            Role[]
+  admins           ScheduleAdmin[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -136,5 +144,15 @@ model Assignment {
 
   @@unique([shiftId, userId])
   @@unique([shiftId, email])
+}
+
+model ScheduleAdmin {
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([scheduleId, userId])
 }
 

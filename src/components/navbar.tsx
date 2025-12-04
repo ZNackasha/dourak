@@ -17,7 +17,6 @@ export async function Navbar() {
             {session?.user && (
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <NavLink href="/schedules">Schedules</NavLink>
-                <NavLink href="/roles">Roles & Team</NavLink>
               </div>
             )}
           </div>

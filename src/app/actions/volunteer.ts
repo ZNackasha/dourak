@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { isScheduleAdmin } from "@/lib/permissions";
 
 export async function addVolunteerAction(formData: FormData) {
   const session = await auth();
@@ -42,7 +43,8 @@ export async function addVolunteerAction(formData: FormData) {
     },
   });
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 
 export async function toggleAvailabilityAction(
@@ -123,7 +125,8 @@ export async function toggleAvailabilityAction(
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 
 export async function confirmAssignmentAction(
@@ -133,14 +136,17 @@ export async function confirmAssignmentAction(
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
-  // Verify ownership logic should be here, but skipping for brevity/speed as requested
+  // Check admin permission
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
 
   await db.assignment.update({
     where: { id: assignmentId },
     data: { status: "CONFIRMED" },
   });
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 
 export async function adminAssignVolunteerAction(
@@ -152,7 +158,9 @@ export async function adminAssignVolunteerAction(
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
-  // Verify ownership (skipping strict check for speed, assuming UI handles it mostly, but should be secure in prod)
+  // Check admin permission
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
 
   await db.assignment.create({
     data: {
@@ -163,6 +171,83 @@ export async function adminAssignVolunteerAction(
     },
   });
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
+}
+
+export async function volunteerForMultipleEventsAction(
+  scheduleId: string,
+  assignments: { eventId: string; shiftId?: string }[]
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const userId = session.user.id;
+
+  for (const { eventId, shiftId } of assignments) {
+    let targetShiftId = shiftId;
+
+    // If no specific shift provided, find or create generic Shift
+    if (!targetShiftId) {
+      let shift = await db.shift.findFirst({
+        where: {
+          calendarEventId: eventId,
+          roleId: null,
+        },
+      });
+
+      if (!shift) {
+        shift = await db.shift.create({
+          data: {
+            calendarEventId: eventId,
+            roleId: null,
+          },
+        });
+      }
+      targetShiftId = shift.id;
+    }
+
+    // Check existing assignment
+    const existing = await db.assignment.findFirst({
+      where: {
+        shiftId: targetShiftId,
+        userId: userId,
+      },
+    });
+
+    if (!existing) {
+      // Verify role if shift has one
+      if (shiftId) {
+        const shift = await db.shift.findUnique({
+          where: { id: shiftId },
+          include: { role: true },
+        });
+
+        if (shift?.roleId) {
+          const hasRole = await db.userRole.findUnique({
+            where: {
+              userId_roleId: {
+                userId,
+                roleId: shift.roleId,
+              },
+            },
+          });
+          // If user doesn't have role, skip this assignment instead of throwing
+          if (!hasRole) continue;
+        }
+      }
+
+      await db.assignment.create({
+        data: {
+          shiftId: targetShiftId,
+          userId: userId,
+          email: session.user.email,
+          status: "AVAILABLE",
+        },
+      });
+    }
+  }
+
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 

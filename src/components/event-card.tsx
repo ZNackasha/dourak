@@ -35,15 +35,27 @@ export function EventCard({
 }) {
   const [isAddingPosition, setIsAddingPosition] = useState(false);
 
-  // Group assignments by shift/role
+  // Group assignments by shift/role (shifts represent positions)
   const shifts = event.shifts;
   const hasRoles = shifts.some((s: any) => s.roleId);
 
-  // Helper to check if user is assigned to a specific shift
+  // Helper to check if user is assigned to a specific shift/position
   const isAssignedToShift = (shiftId: string) => {
     const shift = shifts.find((s: any) => s.id === shiftId);
     return shift?.assignments.some((a: any) => a.userId === currentUserId);
   };
+
+  // Visibility Check: If not owner, only show events relevant to the user
+  if (!isOwner) {
+    if (hasRoles) {
+      const hasMatchingRole = shifts.some((s: any) => s.roleId && userRoleIds.includes(s.roleId));
+      const isAssigned = shifts.some((s: any) => s.assignments.some((a: any) => a.userId === currentUserId));
+
+      if (!hasMatchingRole && !isAssigned) {
+        return null;
+      }
+    }
+  }
 
   const seriesColor = event.recurringEventId
     ? getSeriesColor(event.recurringEventId)
@@ -85,7 +97,7 @@ export function EventCard({
               />
             )}
 
-            {/* If roles defined, show role buttons */}
+            {/* If roles defined, show role buttons for each position */}
             {hasRoles && shifts.map((shift: any) => {
               if (!shift.role) return null;
               const isAssigned = isAssignedToShift(shift.id);
@@ -100,10 +112,10 @@ export function EventCard({
                     onClick={() => !isOwner && toggleAvailabilityAction(event.id, scheduleId, shift.id)}
                     disabled={isOwner}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${isAssigned
-                        ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
-                        : canVolunteer
-                          ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
-                          : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                      : canVolunteer
+                        ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+                        : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
                       }`}
                     title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
                   >
@@ -261,7 +273,7 @@ export function EventCard({
 
             {isOwner && (
               <div className="mt-3 text-xs text-zinc-400 flex justify-between items-center">
-                <span>Manage roles in <a href="/roles" className="text-indigo-600 hover:underline">Role Settings</a></span>
+                <span>Manage roles in <a href={`/schedules/${scheduleId}/roles`} className="text-indigo-600 hover:underline">Role Settings</a></span>
               </div>
             )}
           </div>
@@ -278,12 +290,23 @@ function GenericAvailabilityButton({ event, scheduleId, isOwner, currentUserId }
 
   if (isOwner) return null;
 
+  if (!currentUserId) {
+    return (
+      <a
+        href="/api/auth/signin"
+        className="px-4 py-1.5 rounded-lg text-sm font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 transition-all duration-200 shadow-sm"
+      >
+        Sign in to Volunteer
+      </a>
+    );
+  }
+
   return (
     <button
       onClick={() => toggleAvailabilityAction(event.id, scheduleId)}
       className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm ${isAvailable
-          ? "bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-          : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600"
+        ? "bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+        : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600"
         }`}
     >
       {isAvailable ? "Cancel" : "I'm Available"}

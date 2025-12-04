@@ -5,6 +5,7 @@ import { db } from "@/lib/prisma";
 import { listCalendars, listEvents } from "@/lib/google";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isScheduleAdmin } from "@/lib/permissions";
 
 export async function getCalendarsAction() {
   const session = await auth();
@@ -71,7 +72,7 @@ export async function createScheduleAction(formData: FormData) {
   }
 
   revalidatePath("/schedules");
-  redirect(`/schedules/${schedule.id}`);
+  redirect(`/schedules/${schedule.id}/admin`);
 }
 
 export async function addShiftAction(formData: FormData) {
@@ -84,10 +85,14 @@ export async function addShiftAction(formData: FormData) {
 
   console.log("addShiftAction called with:", { eventId, roleId, scheduleId });
 
-  if (!eventId || !roleId) {
+  if (!eventId || !roleId || !scheduleId) {
     console.error("Missing fields in addShiftAction");
     throw new Error("Missing fields");
   }
+
+  // Check admin permission
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
 
   // 1. Fetch the target event to check for recurring info
   // @ts-ignore
@@ -142,12 +147,17 @@ export async function addShiftAction(formData: FormData) {
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 
 export async function removeShiftAction(shiftId: string, scheduleId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Check admin permission
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
 
   // 1. Fetch the shift to get role and event info
   // @ts-ignore
@@ -198,7 +208,8 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 
 export async function updateShiftAction(
@@ -208,6 +219,10 @@ export async function updateShiftAction(
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Check admin permission
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
 
   // @ts-ignore
   const shift = await db.shift.findUnique({
@@ -259,6 +274,7 @@ export async function updateShiftAction(
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}`);
+  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}/view`);
 }
 
