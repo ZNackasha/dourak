@@ -332,4 +332,3 @@ export async function cancelMultipleVolunteersAction(
   revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
-
