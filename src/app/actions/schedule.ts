@@ -223,7 +223,9 @@ export async function createPlanAction(formData: FormData) {
     const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
+    const schedule = await db.schedule.findUnique({
+      where: { id: scheduleId },
+    });
     if (!schedule) throw new Error("Schedule not found");
 
     const startDate = new Date(startDateStr);
@@ -231,7 +233,9 @@ export async function createPlanAction(formData: FormData) {
 
     // Fetch events FIRST before creating anything in DB
     // This prevents creating empty plans if Google API fails
-    console.log(`Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`);
+    console.log(
+      `Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`
+    );
     const googleEvents = await listEvents(
       session.user.id,
       schedule.googleCalendarId,
@@ -272,7 +276,9 @@ export async function createPlanAction(formData: FormData) {
         const recurringIds = [
           ...new Set(
             eventsToCreate
-              .map((e: { recurringEventId: string | null }) => e.recurringEventId)
+              .map(
+                (e: { recurringEventId: string | null }) => e.recurringEventId
+              )
               .filter((id: string | null): id is string => !!id)
           ),
         ] as string[];
