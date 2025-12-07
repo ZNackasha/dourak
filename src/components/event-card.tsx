@@ -107,6 +107,7 @@ export function EventCard({
                 eventId={event.id}
                 scheduleId={scheduleId}
                 allRoles={allRoles}
+                existingShifts={event.shifts}
               />
             )}
           </div>
@@ -230,9 +231,12 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
   );
 }
 
-function AddPositionButton({ eventId, scheduleId, allRoles }: any) {
+function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: any) {
   const [isAddingPosition, setIsAddingPosition] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
+
+  // Check if there are any role-based shifts (shifts with a roleId)
+  const hasRoleBasedShifts = existingShifts?.some((shift: any) => shift.roleId !== null);
 
   return (
     <div className="relative">
@@ -267,9 +271,11 @@ function AddPositionButton({ eventId, scheduleId, allRoles }: any) {
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >
-              <option value="" className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded font-medium text-indigo-600">
-                General Position (No Role)
-              </option>
+              {!hasRoleBasedShifts && (
+                <option value="" className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded font-medium text-indigo-600">
+                  General Position (No Role)
+                </option>
+              )}
               <option value="__NEW__" className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded font-medium text-indigo-600 border-b border-zinc-100 mb-1">
                 + Create New Role...
               </option>

@@ -100,14 +100,22 @@ export async function listEvents(
   });
 
   const response = await fetch(
-    `${GOOGLE_CALENDAR_API_BASE}/calendars/${calendarId}/events?${params}`,
+    `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(
+      calendarId
+    )}/events?${params}`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     }
   );
 
   if (!response.ok) {
-    throw new Error("Failed to fetch events");
+    const errorText = await response.text();
+    console.error(
+      "Google Calendar API Error (listEvents):",
+      response.status,
+      errorText
+    );
+    throw new Error(`Failed to fetch events: ${response.status} ${errorText}`);
   }
 
   const data = await response.json();

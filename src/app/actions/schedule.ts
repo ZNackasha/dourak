@@ -204,35 +204,46 @@ export async function createScheduleAction(formData: FormData) {
   redirect(`/schedules/${schedule.id}`);
 }
 
-export async function createPlanAction(formData: FormData) {
+export async function createPlanAction(prevState: any, formData: FormData) {
+  let planId: string | undefined;
+  const scheduleId = formData.get("scheduleId") as string;
+
   try {
+    console.log("Starting createPlanAction for schedule:", scheduleId);
     const session = await auth();
     if (!session?.user?.id) {
-      throw new Error("Not authenticated");
+      return { message: "Not authenticated" };
     }
 
-    const scheduleId = formData.get("scheduleId") as string;
     const name = formData.get("name") as string;
     const startDateStr = formData.get("startDate") as string;
     const endDateStr = formData.get("endDate") as string;
 
     if (!scheduleId || !name || !startDateStr || !endDateStr) {
-      throw new Error("Missing fields");
+      return { message: "Missing required fields" };
     }
 
     const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
-    if (!isAdmin) throw new Error("Unauthorized");
+    if (!isAdmin) return { message: "Unauthorized" };
 
     const schedule = await db.schedule.findUnique({
       where: { id: scheduleId },
     });
-    if (!schedule) throw new Error("Schedule not found");
+    if (!schedule) return { message: "Schedule not found" };
+
+    if (!schedule.googleCalendarId) {
+      return {
+        message:
+          "This schedule is not linked to a Google Calendar. Please configure it in the schedule settings.",
+      };
+    }
 
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
+    // Set end date to end of day to be inclusive
+    endDate.setHours(23, 59, 59, 999);
 
     // Fetch events FIRST before creating anything in DB
-    // This prevents creating empty plans if Google API fails
     console.log(
       `Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`
     );
@@ -244,8 +255,16 @@ export async function createPlanAction(formData: FormData) {
     );
     console.log(`Fetched ${googleEvents.length} events from Google`);
 
+    if (googleEvents.length === 0) {
+      console.log("No events found, returning error message");
+      return {
+        message:
+          "No events found in the selected date range. Please check your dates and Google Calendar.",
+      };
+    }
+
     // Use a transaction to ensure atomicity
-    const planId = await db.$transaction(async (tx) => {
+    planId = await db.$transaction(async (tx) => {
       // Create Plan
       const plan = await tx.plan.create({
         data: {
@@ -292,9 +311,6 @@ export async function createPlanAction(formData: FormData) {
           });
 
           if (templates.length > 0) {
-            // We need to fetch the created events to get their IDs
-            // Since createMany doesn't return IDs, we have to query them back
-            // We can match by planId and recurringEventId
             const createdEvents = await tx.calendarEvent.findMany({
               where: {
                 planId: plan.id,
@@ -330,13 +346,22 @@ export async function createPlanAction(formData: FormData) {
       }
       return plan.id;
     });
-
-    revalidatePath(`/schedules/${scheduleId}`);
-    redirect(`/schedules/${scheduleId}/plans/${planId}`);
   } catch (error) {
     console.error("Error creating plan:", error);
-    throw error; // Re-throw to trigger error boundary or show error to user
+    return {
+      message: "Failed to create plan",
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
+
+  if (planId) {
+    console.log("Plan created successfully:", planId);
+    console.log("Redirecting to new plan...");
+    revalidatePath(`/schedules/${scheduleId}`);
+    redirect(`/schedules/${scheduleId}/plans/${planId}`);
+  }
+
+  return { message: "Unknown error occurred" };
 }
 
 export async function addShiftAction(formData: FormData) {
@@ -413,6 +438,22 @@ export async function addShiftAction(formData: FormData) {
       select: { id: true },
     });
     targetEventIds = siblingEvents.map((e: { id: string }) => e.id);
+  }
+
+  // Validation: Enforce mutual exclusivity between General and Role-based shifts
+  const conflictingShifts = await db.shift.findMany({
+    where: {
+      calendarEventId: { in: targetEventIds },
+      roleId: roleId ? null : { not: null },
+    },
+  });
+
+  if (conflictingShifts.length > 0) {
+    throw new Error(
+      roleId
+        ? "Cannot add a specific role because a General Position already exists for this event series."
+        : "Cannot add a General Position because specific roles already exist for this event series."
+    );
   }
 
   // 3. Find which events already have this role assigned
