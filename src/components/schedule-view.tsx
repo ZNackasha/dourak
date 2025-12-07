@@ -229,7 +229,14 @@ export function ScheduleView({
                 <select
                   value={plan.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
-                  className="text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8 w-full sm:w-auto"
+                  className="appearance-none cursor-pointer px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-auto pr-8"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: `right 0.5rem center`,
+                    backgroundRepeat: `no-repeat`,
+                    backgroundSize: `1.5em 1.5em`,
+                    paddingRight: `2.5rem`
+                  }}
                 >
                   <option value="DRAFT">Draft (Hidden)</option>
                   <option value="OPEN">Open (Volunteers)</option>

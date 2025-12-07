@@ -340,7 +340,7 @@ function AssignmentsList({ shifts, isOwner, scheduleId }: any) {
   if (!hasAssignments && !hasAvailability) return null;
 
   return (
-    <div className="mt-3 pt-3 border-t border-zinc-50">
+    <div className="mt-3 border-t border-zinc-50">
       <div className="flex flex-wrap gap-2">
         {shifts.flatMap((s: any) => s.assignments).map((assignment: any) => (
           <div
