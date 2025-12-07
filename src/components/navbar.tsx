@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
+import { MobileNavbar } from "./mobile-navbar";
 
 export async function Navbar() {
   const session = await auth();
@@ -22,34 +23,37 @@ export async function Navbar() {
           </div>
           <div className="flex items-center">
             {session?.user ? (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  {session.user.image ? (
-                    <img
-                      className="h-8 w-8 rounded-full ring-2 ring-white"
-                      src={session.user.image}
-                      alt=""
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                      {session.user.name?.[0]}
-                    </div>
-                  )}
-                  <span className="text-sm font-medium text-zinc-700 hidden md:block">
-                    {session.user.name}
-                  </span>
+              <>
+                <div className="hidden sm:flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {session.user.image ? (
+                      <img
+                        className="h-8 w-8 rounded-full ring-2 ring-white"
+                        src={session.user.image}
+                        alt=""
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                        {session.user.name?.[0]}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-zinc-700 hidden md:block">
+                      {session.user.name}
+                    </span>
+                  </div>
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signOut();
+                    }}
+                  >
+                    <button className="text-sm text-zinc-500 hover:text-indigo-600 font-medium transition-colors">
+                      Sign out
+                    </button>
+                  </form>
                 </div>
-                <form
-                  action={async () => {
-                    "use server";
-                    await signOut();
-                  }}
-                >
-                  <button className="text-sm text-zinc-500 hover:text-zinc-900 font-medium">
-                    Sign out
-                  </button>
-                </form>
-              </div>
+                <MobileNavbar user={session.user} />
+              </>
             ) : (
               <Link
                 href="/"
@@ -69,7 +73,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 transition-colors"
+      className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-zinc-500 hover:text-indigo-600 hover:border-indigo-500 transition-colors"
     >
       {children}
     </Link>

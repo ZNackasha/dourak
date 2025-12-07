@@ -20,7 +20,7 @@ export default async function NewPlanPage({ params }: { params: Promise<{ id: st
 
       <form action={createPlanAction} className="space-y-6 bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
         <input type="hidden" name="scheduleId" value={id} />
-        
+
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1">
             Plan Name

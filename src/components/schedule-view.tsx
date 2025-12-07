@@ -30,8 +30,7 @@ export function ScheduleView({
   const [volunteeringDate, setVolunteeringDate] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
-  const isMatrixView = plan.status === "PUBLISHED" || plan.status === "COMPLETED";
-  const viewMode = isMatrixView ? "matrix" : "cards";
+  const viewMode = (plan.status === "PUBLISHED" || plan.status === "COMPLETED") ? "matrix" : "cards";
 
   const activeUserRoleIds = isImpersonating ? impersonatedRoleIds : initialUserRoleIds;
   const activeIsOwner = isImpersonating ? false : isOwner;
@@ -70,9 +69,10 @@ export function ScheduleView({
         let targetShiftId: string | undefined = undefined;
         let canVolunteer = false;
 
-        const matchingShift = event.shifts.find((shift: any) =>
-          shift.roleId && activeUserRoleIds.includes(shift.roleId)
-        );
+        const matchingShift = event.shifts.find((shift: any) => {
+          const rId = shift.roleId || shift.role?.id;
+          return rId && activeUserRoleIds.includes(rId);
+        });
 
         if (matchingShift) {
           targetShiftId = matchingShift.id;
@@ -127,9 +127,10 @@ export function ScheduleView({
         const hasRoles = shifts.some((s: any) => s.roleId);
 
         if (hasRoles) {
-          const hasMatchingRole = shifts.some(
-            (s: any) => s.roleId && activeUserRoleIds.includes(s.roleId)
-          );
+          const hasMatchingRole = shifts.some((s: any) => {
+            const rId = s.roleId || s.role?.id;
+            return rId && activeUserRoleIds.includes(rId);
+          });
           const isAssigned = shifts.some((s: any) =>
             s.assignments.some((a: any) => a.userId === currentUserId)
           );
@@ -176,7 +177,7 @@ export function ScheduleView({
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
               <a href={`/schedules/${schedule.id}`} className="hover:underline hover:text-zinc-700 transition-colors">
@@ -193,14 +194,13 @@ export function ScheduleView({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isOwner && (
               <>
-                <div className="h-6 w-px bg-zinc-200 mx-1"></div>
                 <select
                   value={plan.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
-                  className="text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8"
+                  className="text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8 w-full sm:w-auto"
                 >
                   <option value="DRAFT">Draft (Hidden)</option>
                   <option value="OPEN">Open (Volunteers)</option>
@@ -210,7 +210,7 @@ export function ScheduleView({
 
                 <button
                   onClick={handleShare}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm flex-1 sm:flex-none"
                 >
                   <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -220,7 +220,7 @@ export function ScheduleView({
 
                 <button
                   onClick={() => setIsImpersonating(!isImpersonating)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors shadow-sm ${isImpersonating
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors shadow-sm flex-1 sm:flex-none ${isImpersonating
                     ? "bg-indigo-50 border-indigo-200 text-indigo-700"
                     : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50"
                     }`}
@@ -229,7 +229,7 @@ export function ScheduleView({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  {isImpersonating ? "Exit Volunteer View" : "View as Volunteer"}
+                  {isImpersonating ? "Exit View" : "Volunteer View"}
                 </button>
               </>
             )}
@@ -279,11 +279,10 @@ export function ScheduleView({
               );
               if (isAssigned) return false;
 
-              const hasMatchingShift = event.shifts.some(
-                (shift: any) =>
-                  (shift.roleId && activeUserRoleIds.includes(shift.roleId)) ||
-                  !shift.roleId
-              );
+              const hasMatchingShift = event.shifts.some((shift: any) => {
+                const rId = shift.roleId || shift.role?.id;
+                return (rId && activeUserRoleIds.includes(rId)) || !shift.roleId;
+              });
 
               return hasMatchingShift || event.shifts.length === 0;
             });

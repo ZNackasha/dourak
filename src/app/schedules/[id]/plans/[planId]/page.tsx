@@ -61,26 +61,23 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
     <div className="space-y-8">
       {isAdmin && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <div className={`border rounded-lg p-4 flex justify-between items-center ${
-            plan.status === 'DRAFT' ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'
-          }`}>
-            <div className="flex items-center gap-3">
-              <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wide ${
-                plan.status === 'DRAFT' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-700'
-              }`}>
+          <div className={`border rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${plan.status === 'DRAFT' ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'
+            }`}>
+            <div className="flex items-start sm:items-center gap-3">
+              <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wide shrink-0 ${plan.status === 'DRAFT' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-700'
+                }`}>
                 {plan.status === 'DRAFT' ? 'Draft Mode' : 'Admin Mode'}
               </span>
               <p className={`text-sm ${plan.status === 'DRAFT' ? 'text-amber-900' : 'text-indigo-900'}`}>
-                {plan.status === 'DRAFT' 
-                  ? "This plan is hidden from volunteers. Publish it to make it visible." 
+                {plan.status === 'DRAFT'
+                  ? "This plan is hidden from volunteers. Publish it to make it visible."
                   : "You are viewing this plan as a volunteer."}
               </p>
             </div>
-            <Link 
+            <Link
               href={`/schedules/${id}/plans/${planId}/admin`}
-              className={`text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors shadow-sm ${
-                plan.status === 'DRAFT' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
+              className={`text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors shadow-sm w-full sm:w-auto text-center ${plan.status === 'DRAFT' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
             >
               Manage Plan
             </Link>

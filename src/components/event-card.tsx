@@ -48,7 +48,10 @@ export function EventCard({
   // Visibility Check
   if (!isOwner) {
     if (hasRoles) {
-      const hasMatchingRole = shifts.some((s: any) => s.roleId && userRoleIds.includes(s.roleId));
+      const hasMatchingRole = shifts.some((s: any) => {
+        const rId = s.roleId || s.role?.id;
+        return rId && userRoleIds.includes(rId);
+      });
       const isAssigned = shifts.some((s: any) => s.assignments.some((a: any) => a.userId === currentUserId));
       const isAvailable = shifts.some((s: any) => s.availabilities?.some((a: any) => a.userId === currentUserId));
 
@@ -65,16 +68,16 @@ export function EventCard({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-all duration-200 group flex">
       <div className={`w-1.5 flex-shrink-0 rounded-l-xl ${seriesColor}`} title={event.recurringEventId ? "Repeating Event Series" : "Single Event"} />
-      <div className="p-3 flex-1 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+      <div className="p-2 sm:p-3 flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-2 sm:gap-3 mb-0.5 sm:mb-1">
               <span className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
                 {new Date(event.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
               </span>
               <div className="h-px flex-1 bg-zinc-100 sm:hidden"></div>
             </div>
-            <h3 className="text-lg font-semibold text-zinc-900 leading-tight flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 leading-tight flex items-center gap-2">
               {event.title}
               {event.recurringEventId && (
                 <span className="text-zinc-400" title="Repeating Event">
@@ -86,7 +89,7 @@ export function EventCard({
             </h3>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-start sm:justify-end mt-1 sm:mt-0">
             {!hasRoles && (
               <GenericAvailabilityButton
                 event={event}
@@ -133,7 +136,8 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
 
   const isAssigned = shift.assignments.some((a: any) => a.userId === currentUserId);
   const isAvailable = shift.availabilities?.some((a: any) => a.userId === currentUserId);
-  const canVolunteer = userRoleIds.includes(shift.roleId);
+  const roleId = shift.roleId || shift.role?.id;
+  const canVolunteer = userRoleIds.includes(roleId);
 
   if (!isOwner && !canVolunteer && !isAssigned && !isAvailable) return null;
 
@@ -142,13 +146,13 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
       <button
         onClick={() => !isOwner && toggleAvailabilityAction(event.id, scheduleId, shift.id)}
         disabled={isOwner}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${isAssigned
-            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
-            : isAvailable
-              ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
-              : canVolunteer
-                ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
-                : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
+        className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isAssigned
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+          : isAvailable
+            ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
+            : canVolunteer
+              ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+              : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
           }`}
         title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
       >
@@ -282,9 +286,12 @@ function AddPositionButton({ eventId, scheduleId, allRoles }: any) {
 }
 
 function AssignmentsList({ shifts, isOwner, scheduleId }: any) {
-  const hasAssignments = shifts.some((s: any) => s.assignments.length > 0);
+  if (!isOwner) return null;
 
-  if (!isOwner && !hasAssignments) return null;
+  const hasAssignments = shifts.some((s: any) => s.assignments.length > 0);
+  const hasAvailability = shifts.some((s: any) => s.availabilities?.length > 0);
+
+  if (!hasAssignments && !hasAvailability) return null;
 
   return (
     <div className="mt-3 pt-3 border-t border-zinc-50">
