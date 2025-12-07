@@ -205,117 +205,132 @@ export async function createScheduleAction(formData: FormData) {
 }
 
 export async function createPlanAction(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error("Not authenticated");
+    }
 
-  const scheduleId = formData.get("scheduleId") as string;
-  const name = formData.get("name") as string;
-  const startDateStr = formData.get("startDate") as string;
-  const endDateStr = formData.get("endDate") as string;
+    const scheduleId = formData.get("scheduleId") as string;
+    const name = formData.get("name") as string;
+    const startDateStr = formData.get("startDate") as string;
+    const endDateStr = formData.get("endDate") as string;
 
-  if (!scheduleId || !name || !startDateStr || !endDateStr) {
-    throw new Error("Missing fields");
-  }
+    if (!scheduleId || !name || !startDateStr || !endDateStr) {
+      throw new Error("Missing fields");
+    }
 
-  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
-  if (!isAdmin) throw new Error("Unauthorized");
+    const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+    if (!isAdmin) throw new Error("Unauthorized");
 
-  const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
-  if (!schedule) throw new Error("Schedule not found");
+    const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
+    if (!schedule) throw new Error("Schedule not found");
 
-  const startDate = new Date(startDateStr);
-  const endDate = new Date(endDateStr);
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
 
-  // Create Plan
-  const plan = await db.plan.create({
-    data: {
-      name,
+    // Fetch events FIRST before creating anything in DB
+    // This prevents creating empty plans if Google API fails
+    console.log(`Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`);
+    const googleEvents = await listEvents(
+      session.user.id,
+      schedule.googleCalendarId,
       startDate,
-      endDate,
-      scheduleId,
-      status: "DRAFT",
-    },
-  });
+      endDate
+    );
+    console.log(`Fetched ${googleEvents.length} events from Google`);
 
-  // Fetch events
-  const googleEvents = await listEvents(
-    session.user.id,
-    schedule.googleCalendarId,
-    startDate,
-    endDate
-  );
-
-  // Save events
-  const eventsToCreate = googleEvents.map((ev: any) => ({
-    planId: plan.id,
-    googleEventId: ev.id,
-    title: ev.summary || "No Title",
-    start: new Date(ev.start.dateTime || ev.start.date),
-    end: new Date(ev.end.dateTime || ev.end.date),
-    recurringEventId: ev.recurringEventId || null,
-  }));
-
-  if (eventsToCreate.length > 0) {
-    await db.calendarEvent.createMany({
-      data: eventsToCreate,
-    });
-
-    // Apply RecurringShift templates
-    const recurringIds = [
-      ...new Set(
-        eventsToCreate
-          .map((e: { recurringEventId: string | null }) => e.recurringEventId)
-          .filter((id: string | null): id is string => !!id)
-      ),
-    ] as string[];
-
-    if (recurringIds.length > 0) {
-      const templates = await db.recurringShift.findMany({
-        where: {
-          scheduleId: scheduleId,
-          recurringEventId: { in: recurringIds },
+    // Use a transaction to ensure atomicity
+    const planId = await db.$transaction(async (tx) => {
+      // Create Plan
+      const plan = await tx.plan.create({
+        data: {
+          name,
+          startDate,
+          endDate,
+          scheduleId,
+          status: "DRAFT",
         },
       });
 
-      if (templates.length > 0) {
-        const createdEvents = await db.calendarEvent.findMany({
-          where: {
-            planId: plan.id,
-            recurringEventId: { in: recurringIds },
-          },
-          select: { id: true, recurringEventId: true },
+      // Prepare events
+      const eventsToCreate = googleEvents.map((ev: any) => ({
+        planId: plan.id,
+        googleEventId: ev.id,
+        title: ev.summary || "No Title",
+        start: new Date(ev.start.dateTime || ev.start.date),
+        end: new Date(ev.end.dateTime || ev.end.date),
+        recurringEventId: ev.recurringEventId || null,
+      }));
+
+      if (eventsToCreate.length > 0) {
+        await tx.calendarEvent.createMany({
+          data: eventsToCreate,
         });
 
-        const shiftsToCreate = [];
-        for (const event of createdEvents) {
-          if (!event.recurringEventId) continue;
-          const eventTemplates = templates.filter(
-            (t: { recurringEventId: string }) =>
-              t.recurringEventId === event.recurringEventId
-          );
-          for (const template of eventTemplates) {
-            shiftsToCreate.push({
-              calendarEventId: event.id,
-              roleId: template.roleId,
-              needed: template.needed,
-              name: template.name,
+        // Apply RecurringShift templates
+        const recurringIds = [
+          ...new Set(
+            eventsToCreate
+              .map((e: { recurringEventId: string | null }) => e.recurringEventId)
+              .filter((id: string | null): id is string => !!id)
+          ),
+        ] as string[];
+
+        if (recurringIds.length > 0) {
+          const templates = await tx.recurringShift.findMany({
+            where: {
+              scheduleId: scheduleId,
+              recurringEventId: { in: recurringIds },
+            },
+          });
+
+          if (templates.length > 0) {
+            // We need to fetch the created events to get their IDs
+            // Since createMany doesn't return IDs, we have to query them back
+            // We can match by planId and recurringEventId
+            const createdEvents = await tx.calendarEvent.findMany({
+              where: {
+                planId: plan.id,
+                recurringEventId: { in: recurringIds },
+              },
+              select: { id: true, recurringEventId: true },
             });
+
+            const shiftsToCreate = [];
+            for (const event of createdEvents) {
+              if (!event.recurringEventId) continue;
+              const eventTemplates = templates.filter(
+                (t: { recurringEventId: string }) =>
+                  t.recurringEventId === event.recurringEventId
+              );
+              for (const template of eventTemplates) {
+                shiftsToCreate.push({
+                  calendarEventId: event.id,
+                  roleId: template.roleId,
+                  needed: template.needed,
+                  name: template.name,
+                });
+              }
+            }
+
+            if (shiftsToCreate.length > 0) {
+              await tx.shift.createMany({
+                data: shiftsToCreate,
+              });
+            }
           }
         }
-
-        if (shiftsToCreate.length > 0) {
-          await db.shift.createMany({
-            data: shiftsToCreate,
-          });
-        }
       }
-    }
-  }
+      return plan.id;
+    });
 
-  revalidatePath(`/schedules/${scheduleId}`);
-  redirect(`/schedules/${scheduleId}/plans/${plan.id}`);
+    revalidatePath(`/schedules/${scheduleId}`);
+    redirect(`/schedules/${scheduleId}/plans/${planId}`);
+  } catch (error) {
+    console.error("Error creating plan:", error);
+    throw error; // Re-throw to trigger error boundary or show error to user
+  }
 }
 
 export async function addShiftAction(formData: FormData) {
