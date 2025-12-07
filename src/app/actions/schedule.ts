@@ -266,18 +266,22 @@ export async function addShiftAction(formData: FormData) {
   if (!session?.user?.id) throw new Error("Not authenticated");
 
   const eventId = formData.get("eventId") as string;
-  const roleId = formData.get("roleId") as string;
+  const roleIdInput = formData.get("roleId") as string;
+  const newRoleName = formData.get("newRoleName") as string;
+  // If roleId is "__NEW__", treat it as null so we create a new role
+  let roleId = roleIdInput && roleIdInput !== "__NEW__" ? roleIdInput : null;
   const scheduleId = formData.get("scheduleId") as string;
   const needed = parseInt(formData.get("needed") as string) || 1;
 
   console.log("addShiftAction called with:", {
     eventId,
     roleId,
+    newRoleName,
     scheduleId,
     needed,
   });
 
-  if (!eventId || !roleId || !scheduleId) {
+  if (!eventId || !scheduleId) {
     console.error("Missing fields in addShiftAction");
     throw new Error("Missing fields");
   }
@@ -285,6 +289,31 @@ export async function addShiftAction(formData: FormData) {
   // Check admin permission
   const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
   if (!isAdmin) throw new Error("Unauthorized");
+
+  // Handle new role creation
+  if (!roleId && newRoleName) {
+    const existingRole = await db.role.findFirst({
+      where: {
+        scheduleId,
+        name: newRoleName.trim(),
+      },
+    });
+
+    if (existingRole) {
+      roleId = existingRole.id;
+    } else {
+      const newRole = await db.role.create({
+        data: {
+          name: newRoleName.trim(),
+          scheduleId,
+          type: "required",
+          inviteToken: crypto.randomUUID(),
+          color: "#6366f1", // Default indigo
+        },
+      });
+      roleId = newRole.id;
+    }
+  }
 
   // 1. Fetch the target event to check for recurring info
   const targetEvent = await db.calendarEvent.findUnique({
