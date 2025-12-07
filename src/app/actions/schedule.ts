@@ -6,6 +6,7 @@ import { listCalendars, listEvents } from "@/lib/google";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
+import nodemailer from "nodemailer";
 import {
   generateSchedule,
   SchedulerEvent,
@@ -609,9 +610,96 @@ export async function updatePlanStatusAction(
 
   if (status === "PUBLISHED") {
     await autoScheduleAction(planId, scheduleId);
+    await sendPublishNotifications(planId);
   }
 
   revalidatePath(`/schedules/${scheduleId}`);
+}
+
+async function sendPublishNotifications(planId: string) {
+  const plan = await db.plan.findUnique({
+    where: { id: planId },
+    include: { schedule: true },
+  });
+  if (!plan) return;
+
+  const assignments = await db.assignment.findMany({
+    where: {
+      shift: {
+        calendarEvent: {
+          planId: planId,
+        },
+      },
+    },
+    include: {
+      user: true,
+      shift: {
+        include: {
+          calendarEvent: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  const emailGroups: Record<string, typeof assignments> = {};
+
+  for (const assignment of assignments) {
+    const email = assignment.user?.email || assignment.email;
+    if (!email) continue;
+
+    if (!emailGroups[email]) {
+      emailGroups[email] = [];
+    }
+    emailGroups[email].push(assignment);
+  }
+
+  const from = process.env.EMAIL_FROM || "noreply@dourak.app";
+  let transporter: nodemailer.Transporter;
+
+  if (process.env.EMAIL_SERVER) {
+    transporter = nodemailer.createTransport(process.env.EMAIL_SERVER);
+  } else {
+    // Mock transporter for dev
+    transporter = nodemailer.createTransport({
+      jsonTransport: true,
+    });
+  }
+
+  for (const [email, userAssignments] of Object.entries(emailGroups)) {
+    const assignmentList = userAssignments
+      .map((a) => {
+        const date = a.shift.calendarEvent.start.toLocaleDateString();
+        const time = a.shift.calendarEvent.start.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const role = a.shift.role?.name || a.shift.name || "Volunteer";
+        const eventTitle = a.shift.calendarEvent.title;
+        return `- ${date} at ${time}: ${role} (${eventTitle})`;
+      })
+      .join("\n");
+
+    const text = `Hello,\n\nYou have been scheduled for the following shifts in ${plan.name}:\n\n${assignmentList}\n\nPlease log in to Dourak to confirm your assignments.\n\nBest,\nDourak Team`;
+
+    try {
+      const info = await transporter.sendMail({
+        from,
+        to: email,
+        subject: `New Schedule: ${plan.name}`,
+        text,
+      });
+
+      if (!process.env.EMAIL_SERVER) {
+        console.log("----------------------------------------------");
+        console.log(`Email to ${email}:`);
+        console.log(text);
+        console.log("----------------------------------------------");
+      }
+    } catch (e) {
+      console.error(`Failed to send email to ${email}`, e);
+    }
+  }
 }
 
 export async function syncScheduleEventsAction(scheduleId: string) {

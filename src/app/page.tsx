@@ -18,7 +18,7 @@ export default async function Home() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Church Scheduler</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Dourak</h1>
           <p className="text-lg text-zinc-500">
             Coordinate volunteers with Google Calendar integration.
           </p>
@@ -41,6 +41,37 @@ export default async function Home() {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
             </svg>
             Sign in with Google
+          </button>
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-200" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-zinc-50 px-2 text-zinc-500">Or continue with email</span>
+          </div>
+        </div>
+
+        <form
+          action={async (formData) => {
+            "use server";
+            await signIn("email", { email: formData.get("email") });
+          }}
+          className="space-y-3"
+        >
+          <input
+            type="email"
+            name="email"
+            placeholder="name@example.com"
+            required
+            className="w-full rounded-xl border-zinc-200 bg-white px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+          />
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-zinc-900 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 transition shadow-sm flex items-center justify-center"
+          >
+            Sign in with Email
           </button>
         </form>
       </div>

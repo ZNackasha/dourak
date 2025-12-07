@@ -1,5 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Email from "next-auth/providers/email";
+import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { db } from "@/lib/prisma";
@@ -25,6 +27,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
     }),
+    process.env.RESEND_API_KEY
+      ? Resend({
+          // Force the ID to be "email" so it works with existing signIn("email") calls
+          id: "email",
+          name: "Email",
+          apiKey: process.env.RESEND_API_KEY,
+          from: process.env.EMAIL_FROM,
+        })
+      : Email({
+          id: "email",
+          name: "Email",
+          server: process.env.EMAIL_SERVER || "smtp://localhost:25",
+          from: process.env.EMAIL_FROM || "no-reply@example.com",
+          ...(process.env.EMAIL_SERVER
+            ? {}
+            : {
+                sendVerificationRequest: ({ url }) => {
+                  console.log("----------------------------------------------");
+                  console.log(`Login link: ${url}`);
+                  console.log("----------------------------------------------");
+                },
+              }),
+        }),
   ],
   callbacks: {
     // @ts-ignore

@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Volunteer Scheduler",
+  title: "Dourak",
   description:
-    "Coordinate Gmail-authenticated volunteers with Vercel Postgres + Prisma",
+    "Coordinate volunteers with Google Calendar integration",
 };
 
 export default function RootLayout({

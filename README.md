@@ -1,4 +1,4 @@
-# Church Scheduler
+# Dourak
 
 Volunteer coordination app built with Next.js App Router, Prisma, Postgres, and NextAuth (Google).
 
