@@ -4,6 +4,7 @@ import { createPlanAction } from "@/app/actions/schedule";
 import { useFormStatus } from "react-dom";
 import { useState, useEffect, useActionState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 function SubmitButton() {
 	const { pending } = useFormStatus();
@@ -20,10 +21,17 @@ function SubmitButton() {
 }
 
 export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
+	const router = useRouter();
 	const [state, formAction] = useActionState(createPlanAction, null);
 
 	useEffect(() => {
 		console.log("Form state updated:", state);
+		if (state?.success && state.planId) {
+			toast.success(state.message);
+			router.push(`/schedules/${scheduleId}/plans/${state.planId}`);
+			return;
+		}
+
 		if (state?.message) {
 			if (state.error) {
 				toast.error(state.message, {
@@ -31,10 +39,14 @@ export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
 					duration: 5000,
 				});
 			} else {
-				toast.success(state.message);
+				// Only show success toast here if it's not the redirect case (though redirect case is handled above)
+				// But keep it for other messages if any
+				if (!state.success) {
+					toast.success(state.message);
+				}
 			}
 		}
-	}, [state]);
+	}, [state, router, scheduleId]);
 
 	return (
 		<form

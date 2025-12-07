@@ -358,7 +358,11 @@ export async function createPlanAction(prevState: any, formData: FormData) {
     console.log("Plan created successfully:", planId);
     console.log("Redirecting to new plan...");
     revalidatePath(`/schedules/${scheduleId}`);
-    redirect(`/schedules/${scheduleId}/plans/${planId}`);
+    return {
+      success: true,
+      message: "Plan created successfully",
+      planId,
+    };
   }
 
   return { message: "Unknown error occurred" };
