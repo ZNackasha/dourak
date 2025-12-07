@@ -46,15 +46,14 @@ export function MobileNavbar({ user }: { user: any }) {
               <span className="text-xs text-zinc-500">{user.email}</span>
             </div>
           </div>
-          
+
           <Link
             href="/schedules"
             onClick={() => setIsOpen(false)}
-            className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              pathname.startsWith("/schedules")
+            className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith("/schedules")
                 ? "bg-indigo-50 text-indigo-700"
                 : "text-zinc-700 hover:bg-zinc-50"
-            }`}
+              }`}
           >
             Schedules
           </Link>

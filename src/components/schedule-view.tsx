@@ -106,7 +106,7 @@ export function ScheduleView({
   const getVisibleEvents = () => {
     let visibleEvents = events;
 
-    if (isOwner && !isImpersonating) {
+    if (isOwner && !isImpersonating && viewMode === "cards") {
       const seenRecurringIds = new Set<string>();
       visibleEvents = visibleEvents.filter((event) => {
         if (event.recurringEventId) {

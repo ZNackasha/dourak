@@ -108,7 +108,10 @@ export async function toggleAvailabilityAction(
             },
           },
         });
-        if (!hasRole)
+
+        const isAdmin = await isScheduleAdmin(scheduleId, userId);
+
+        if (!hasRole && !isAdmin)
           throw new Error(
             "You do not have the required role for this position."
           );
@@ -265,8 +268,11 @@ export async function volunteerForMultipleEventsAction(
               },
             },
           });
-          // If user doesn't have role, skip this assignment instead of throwing
-          if (!hasRole) continue;
+
+          const isAdmin = await isScheduleAdmin(scheduleId, userId);
+
+          // If user doesn't have role and is not admin, skip this assignment instead of throwing
+          if (!hasRole && !isAdmin) continue;
         }
       }
 
