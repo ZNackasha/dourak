@@ -23,6 +23,7 @@ export default defineConfig({
   },
   datasource: {
     url: databaseUrl,
+    // @ts-expect-error - directUrl is supported in Prisma 7 but types might be missing
     directUrl,
   },
 });
