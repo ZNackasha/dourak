@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { EventCard } from "@/components/event-card";
+import { ScheduleMatrix } from "@/components/schedule-matrix";
 import { volunteerForMultipleEventsAction } from "@/app/actions/volunteer";
+import { updatePlanStatusAction } from "@/app/actions/schedule";
 
 interface ScheduleViewProps {
   schedule: any;
+  plan: any;
   events: any[];
   isOwner: boolean;
   userRoleIds: string[];
@@ -15,6 +18,7 @@ interface ScheduleViewProps {
 
 export function ScheduleView({
   schedule,
+  plan,
   events,
   isOwner,
   userRoleIds: initialUserRoleIds,
@@ -24,6 +28,10 @@ export function ScheduleView({
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonatedRoleIds, setImpersonatedRoleIds] = useState<string[]>([]);
   const [volunteeringDate, setVolunteeringDate] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const isMatrixView = plan.status === "PUBLISHED" || plan.status === "COMPLETED";
+  const viewMode = isMatrixView ? "matrix" : "cards";
 
   const activeUserRoleIds = isImpersonating ? impersonatedRoleIds : initialUserRoleIds;
   const activeIsOwner = isImpersonating ? false : isOwner;
@@ -34,6 +42,17 @@ export function ScheduleView({
         ? prev.filter((id) => id !== roleId)
         : [...prev, roleId]
     );
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    await updatePlanStatusAction(plan.id, schedule.id, newStatus as any);
+  };
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/schedules/${schedule.id}/plans/${plan.id}`;
+    navigator.clipboard.writeText(url);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleVolunteerAll = async (date: string, dateEvents: any[]) => {
@@ -159,45 +178,62 @@ export function ScheduleView({
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">{schedule.name}</h1>
+            <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
+              <a href={`/schedules/${schedule.id}`} className="hover:underline hover:text-zinc-700 transition-colors">
+                {schedule.name}
+              </a> <span className="text-zinc-400 font-normal">/ {plan.name}</span>
+            </h1>
             <div className="flex items-center gap-2 mt-2 text-zinc-500">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>
-                {schedule.startDate.toLocaleDateString(undefined, { dateStyle: 'medium' })} - {schedule.endDate.toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                {plan.startDate.toLocaleDateString(undefined, { dateStyle: 'medium' })} - {plan.endDate.toLocaleDateString(undefined, { dateStyle: 'medium' })}
               </span>
             </div>
           </div>
-          
-          {isOwner && (
-            <div className="flex items-center gap-2">
-               <button
-                onClick={() => setIsImpersonating(!isImpersonating)}
-                className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors shadow-sm ${
-                  isImpersonating 
-                    ? "bg-indigo-50 border-indigo-200 text-indigo-700" 
+
+          <div className="flex items-center gap-2">
+            {isOwner && (
+              <>
+                <div className="h-6 w-px bg-zinc-200 mx-1"></div>
+                <select
+                  value={plan.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8"
+                >
+                  <option value="DRAFT">Draft (Hidden)</option>
+                  <option value="OPEN">Open (Volunteers)</option>
+                  <option value="PUBLISHED">Published (Final)</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+
+                <button
+                  onClick={handleShare}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm"
+                >
+                  <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  {isCopied ? "Copied!" : "Share"}
+                </button>
+
+                <button
+                  onClick={() => setIsImpersonating(!isImpersonating)}
+                  className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors shadow-sm ${isImpersonating
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-700"
                     : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50"
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                {isImpersonating ? "Exit Volunteer View" : "View as Volunteer"}
-              </button>
-              
-              <a
-                href={`/schedules/${schedule.id}/roles`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm"
-              >
-                <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Manage Roles
-              </a>
-            </div>
-          )}
+                    }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  {isImpersonating ? "Exit Volunteer View" : "View as Volunteer"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {isOwner && isImpersonating && (
@@ -216,11 +252,10 @@ export function ScheduleView({
                   <button
                     key={role.id}
                     onClick={() => toggleImpersonatedRole(role.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                      isSelected
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                        : "bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600"
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${isSelected
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : "bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600"
+                      }`}
                   >
                     {role.name}
                     {isSelected && " ✓"}
@@ -235,64 +270,70 @@ export function ScheduleView({
         )}
       </div>
 
-      <div className="space-y-10">
-        {Object.entries(eventsByDate).map(([date, events]: any) => {
-          const canVolunteerForAny = events.some((event: any) => {
-            const isAssigned = event.shifts.some((shift: any) =>
-              shift.assignments.some((a: any) => a.userId === currentUserId)
-            );
-            if (isAssigned) return false;
+      {viewMode === "cards" ? (
+        <div className="space-y-10">
+          {Object.entries(eventsByDate).map(([date, events]: any) => {
+            const canVolunteerForAny = events.some((event: any) => {
+              const isAssigned = event.shifts.some((shift: any) =>
+                shift.assignments.some((a: any) => a.userId === currentUserId)
+              );
+              if (isAssigned) return false;
 
-            const hasMatchingShift = event.shifts.some(
-              (shift: any) =>
-                (shift.roleId && activeUserRoleIds.includes(shift.roleId)) ||
-                !shift.roleId
-            );
+              const hasMatchingShift = event.shifts.some(
+                (shift: any) =>
+                  (shift.roleId && activeUserRoleIds.includes(shift.roleId)) ||
+                  !shift.roleId
+              );
 
-            return hasMatchingShift || event.shifts.length === 0;
-          });
+              return hasMatchingShift || event.shifts.length === 0;
+            });
 
-          return (
-            <div key={date} className="relative">
-              <div className="sticky top-0 z-10 bg-zinc-50/95 backdrop-blur-sm py-3 mb-4 border-b border-zinc-200/50 flex justify-between items-center">
-                <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                  {date}
-                </h2>
-                {canVolunteerForAny && !activeIsOwner && currentUserId && (
-                  <button
-                    onClick={() => handleVolunteerAll(date, events)}
-                    disabled={volunteeringDate === date}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 bg-indigo-50 px-3 py-1 rounded-full transition-colors"
-                  >
-                    {volunteeringDate === date
-                      ? "Signing up..."
-                      : "Volunteer for All"}
-                  </button>
-                )}
+            return (
+              <div key={date} className="relative">
+                <div className="sticky top-0 z-10 bg-zinc-50/95 backdrop-blur-sm py-3 mb-4 border-b border-zinc-200/50 flex justify-between items-center">
+                  <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    {date}
+                  </h2>
+                  {canVolunteerForAny && !activeIsOwner && currentUserId && (
+                    <button
+                      onClick={() => handleVolunteerAll(date, events)}
+                      disabled={volunteeringDate === date}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 bg-indigo-50 px-3 py-1 rounded-full transition-colors"
+                    >
+                      {volunteeringDate === date
+                        ? "Signing up..."
+                        : "Volunteer for All"}
+                    </button>
+                  )}
+                </div>
+                <div className="grid gap-4">
+                  {events.map((event: any) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      scheduleId={schedule.id}
+                      isOwner={activeIsOwner}
+                      currentUserId={currentUserId}
+                      userRoleIds={activeUserRoleIds}
+                      allRoles={allRoles}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="grid gap-4">
-                {events.map((event: any) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    scheduleId={schedule.id}
-                    isOwner={activeIsOwner}
-                    currentUserId={currentUserId}
-                    userRoleIds={activeUserRoleIds}
-                    allRoles={allRoles}
-                  />
-                ))}
-              </div>
+            );
+          })}
+          {Object.keys(eventsByDate).length === 0 && (
+            <div className="text-center py-16 bg-white rounded-xl border border-dashed border-zinc-200">
+              <p className="text-zinc-500">No events found in this schedule.</p>
             </div>
-          );
-        })}
-        {Object.keys(eventsByDate).length === 0 && (
-          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-zinc-200">
-            <p className="text-zinc-500">No events found in this schedule.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-x-auto pb-10">
+          <ScheduleMatrix events={filteredEvents} allRoles={allRoles} />
+        </div>
+      )}
     </div>
   );
 }

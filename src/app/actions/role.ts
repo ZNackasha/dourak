@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isScheduleAdmin } from "@/lib/permissions";
 
@@ -71,11 +72,39 @@ export async function createRoleAction(formData: FormData) {
         description: parsed.data.description?.trim(),
         color: normalizedColor,
         scheduleId,
+        inviteToken: crypto.randomUUID(),
       },
     });
   }
 
   revalidatePath(`/schedules/${scheduleId}/roles`);
+}
+
+export async function regenerateRoleInviteTokenAction(roleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const role = await db.role.findUnique({
+    where: { id: roleId },
+    select: { id: true, scheduleId: true },
+  });
+  if (!role) throw new Error("Role not found");
+
+  if (role.scheduleId) {
+    const isAdmin = await isScheduleAdmin(role.scheduleId, session.user.id);
+    if (!isAdmin) throw new Error("Unauthorized");
+  }
+
+  await db.role.update({
+    where: { id: roleId },
+    data: {
+      inviteToken: crypto.randomUUID(),
+    },
+  });
+
+  if (role.scheduleId) {
+    revalidatePath(`/schedules/${role.scheduleId}/roles`);
+  }
 }
 
 export async function addUserToRoleAction(formData: FormData) {
@@ -89,9 +118,9 @@ export async function addUserToRoleAction(formData: FormData) {
   if (!email || !roleId) throw new Error("Missing fields");
 
   // Fetch role to get scheduleId for revalidation and permission check
-  const role = await db.role.findUnique({ 
+  const role = await db.role.findUnique({
     where: { id: roleId },
-    select: { id: true, scheduleId: true }
+    select: { id: true, scheduleId: true },
   });
   if (!role) throw new Error("Role not found");
 
@@ -135,9 +164,9 @@ export async function removeUserFromRoleAction(userId: string, roleId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
-  const role = await db.role.findUnique({ 
+  const role = await db.role.findUnique({
     where: { id: roleId },
-    select: { id: true, scheduleId: true }
+    select: { id: true, scheduleId: true },
   });
   if (!role) throw new Error("Role not found");
 
@@ -174,9 +203,9 @@ export async function updateRoleAction(formData: FormData) {
 
   if (!roleId || !name) throw new Error("Missing fields");
 
-  const role = await db.role.findUnique({ 
+  const role = await db.role.findUnique({
     where: { id: roleId },
-    select: { id: true, scheduleId: true }
+    select: { id: true, scheduleId: true },
   });
   if (!role) throw new Error("Role not found");
 
@@ -205,6 +234,37 @@ export async function updateRoleAction(formData: FormData) {
     revalidatePath(`/schedules/${role.scheduleId}/roles`);
   } else {
     revalidatePath("/roles");
+  }
+}
+
+export async function joinRoleViaInviteAction(token: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const role = await db.role.findUnique({
+    where: { inviteToken: token },
+    include: { schedule: true },
+  });
+
+  if (!role) throw new Error("Invalid invite link");
+
+  // Add user to role
+  try {
+    await db.userRole.create({
+      data: {
+        userId: session.user.id,
+        roleId: role.id,
+        type: role.type, // Use role's default type
+      },
+    });
+  } catch (error) {
+    // Ignore if already exists
+  }
+
+  if (role.scheduleId) {
+    redirect(`/schedules/${role.scheduleId}`);
+  } else {
+    redirect("/");
   }
 }
 

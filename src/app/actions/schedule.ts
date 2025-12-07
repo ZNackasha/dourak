@@ -6,6 +6,132 @@ import { listCalendars, listEvents } from "@/lib/google";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
+import {
+  generateSchedule,
+  SchedulerEvent,
+  SchedulerUser,
+} from "@/lib/scheduler";
+
+export async function autoScheduleAction(planId: string, scheduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  // 1. Fetch all shifts for the plan
+  const plan = await db.plan.findUnique({
+    where: { id: planId },
+    include: {
+      events: {
+        include: {
+          shifts: {
+            include: {
+              assignments: true,
+              role: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!plan) throw new Error("Plan not found");
+
+  // 2. Fetch all users with roles or availability
+  const usersWithRoles = await db.user.findMany({
+    where: {
+      OR: [
+        {
+          roles: {
+            some: {
+              role: {
+                scheduleId: scheduleId,
+              },
+            },
+          },
+        },
+        {
+          availabilities: {
+            some: {
+              shift: {
+                calendarEvent: {
+                  planId: planId,
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      roles: {
+        where: {
+          role: {
+            scheduleId: scheduleId,
+          },
+        },
+        include: {
+          role: true,
+        },
+      },
+      availabilities: {
+        where: {
+          shift: {
+            calendarEvent: {
+              planId: planId,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // 3. Map to Scheduler types
+  const schedulerEvents: SchedulerEvent[] = [];
+
+  for (const event of plan.events) {
+    for (const shift of event.shifts) {
+      schedulerEvents.push({
+        id: shift.id,
+        roleId: shift.roleId,
+        start: event.start,
+        end: event.end,
+        assignments: shift.assignments.map((a) => ({
+          userId: a.userId,
+          status: a.status,
+        })),
+      });
+    }
+  }
+
+  const schedulerUsers: SchedulerUser[] = usersWithRoles.map((u) => ({
+    id: u.id,
+    roles: u.roles.map((ur) => ({
+      roleId: ur.roleId,
+      type: ur.type as "required" | "optional",
+    })),
+    availableEvents: u.availabilities.map((a) => a.shiftId),
+  }));
+
+  // 4. Run the scheduler
+  const results = generateSchedule(schedulerEvents, schedulerUsers);
+
+  // 5. Save assignments
+  if (results.length > 0) {
+    await db.assignment.createMany({
+      data: results.map((r) => ({
+        shiftId: r.eventId, // mapped from shift.id
+        userId: r.userId,
+        status: "PENDING",
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`);
+  return { count: results.length };
+}
 
 export async function getCalendarsAction() {
   const session = await auth();
@@ -23,44 +149,73 @@ export async function createScheduleAction(formData: FormData) {
 
   const name = formData.get("name") as string;
   const calendarId = formData.get("calendarId") as string;
-  const startDateStr = formData.get("startDate") as string;
-  const endDateStr = formData.get("endDate") as string;
 
-  if (!name || !calendarId || !startDateStr || !endDateStr) {
+  if (!name || !calendarId) {
     throw new Error("Missing fields");
   }
-
-  const startDate = new Date(startDateStr);
-  const endDate = new Date(endDateStr);
 
   // Create Schedule
   const schedule = await db.schedule.create({
     data: {
       name,
       googleCalendarId: calendarId,
+      userId: session.user.id,
+    },
+  });
+
+  revalidatePath("/schedules");
+  redirect(`/schedules/${schedule.id}`);
+}
+
+export async function createPlanAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const scheduleId = formData.get("scheduleId") as string;
+  const name = formData.get("name") as string;
+  const startDateStr = formData.get("startDate") as string;
+  const endDateStr = formData.get("endDate") as string;
+
+  if (!scheduleId || !name || !startDateStr || !endDateStr) {
+    throw new Error("Missing fields");
+  }
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
+  if (!schedule) throw new Error("Schedule not found");
+
+  const startDate = new Date(startDateStr);
+  const endDate = new Date(endDateStr);
+
+  // Create Plan
+  const plan = await db.plan.create({
+    data: {
+      name,
       startDate,
       endDate,
-      userId: session.user.id,
+      scheduleId,
+      status: "DRAFT",
     },
   });
 
   // Fetch events
   const googleEvents = await listEvents(
     session.user.id,
-    calendarId,
+    schedule.googleCalendarId,
     startDate,
     endDate
   );
 
   // Save events
-  // We need to map Google Event to our CalendarEvent
-  // Google Event structure: { id, summary, start: { dateTime }, end: { dateTime }, recurringEventId }
-
   const eventsToCreate = googleEvents.map((ev: any) => ({
-    scheduleId: schedule.id,
+    planId: plan.id,
     googleEventId: ev.id,
     title: ev.summary || "No Title",
-    start: new Date(ev.start.dateTime || ev.start.date), // Handle all-day events too?
+    start: new Date(ev.start.dateTime || ev.start.date),
     end: new Date(ev.end.dateTime || ev.end.date),
     recurringEventId: ev.recurringEventId || null,
   }));
@@ -71,8 +226,8 @@ export async function createScheduleAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/schedules");
-  redirect(`/schedules/${schedule.id}/admin`);
+  revalidatePath(`/schedules/${scheduleId}`);
+  redirect(`/schedules/${scheduleId}/plans/${plan.id}`);
 }
 
 export async function addShiftAction(formData: FormData) {
@@ -95,22 +250,20 @@ export async function addShiftAction(formData: FormData) {
   if (!isAdmin) throw new Error("Unauthorized");
 
   // 1. Fetch the target event to check for recurring info
-  // @ts-ignore
   const targetEvent = await db.calendarEvent.findUnique({
     where: { id: eventId },
-    select: { id: true, recurringEventId: true, scheduleId: true },
+    select: { id: true, recurringEventId: true, planId: true },
   });
 
   if (!targetEvent) throw new Error("Event not found");
 
   let targetEventIds = [targetEvent.id];
 
-  // 2. If it's a recurring event, find all siblings in the same schedule
+  // 2. If it's a recurring event, find all siblings in the same plan
   if (targetEvent.recurringEventId) {
-    // @ts-ignore
     const siblingEvents = await db.calendarEvent.findMany({
       where: {
-        scheduleId: targetEvent.scheduleId,
+        planId: targetEvent.planId,
         recurringEventId: targetEvent.recurringEventId,
       },
       select: { id: true },
@@ -119,7 +272,6 @@ export async function addShiftAction(formData: FormData) {
   }
 
   // 3. Find which events already have this role assigned
-  // @ts-ignore
   const existingShifts = await db.shift.findMany({
     where: {
       calendarEventId: { in: targetEventIds },
@@ -138,7 +290,6 @@ export async function addShiftAction(formData: FormData) {
   );
 
   if (eventsToCreateFor.length > 0) {
-    // @ts-ignore
     await db.shift.createMany({
       data: eventsToCreateFor.map((id) => ({
         calendarEventId: id,
@@ -147,8 +298,7 @@ export async function addShiftAction(formData: FormData) {
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`);
 }
 
 export async function removeShiftAction(shiftId: string, scheduleId: string) {
@@ -160,7 +310,6 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
   if (!isAdmin) throw new Error("Unauthorized");
 
   // 1. Fetch the shift to get role and event info
-  // @ts-ignore
   const shift = await db.shift.findUnique({
     where: { id: shiftId },
     include: {
@@ -168,7 +317,7 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
         select: {
           id: true,
           recurringEventId: true,
-          scheduleId: true,
+          planId: true,
         },
       },
     },
@@ -184,7 +333,7 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     // @ts-ignore
     const siblingEvents = await db.calendarEvent.findMany({
       where: {
-        scheduleId: calendarEvent.scheduleId,
+        planId: calendarEvent.planId,
         recurringEventId: calendarEvent.recurringEventId,
       },
       select: { id: true },
@@ -193,7 +342,6 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     const siblingEventIds = siblingEvents.map((e: { id: string }) => e.id);
 
     // Delete shifts with same role in these events
-    // @ts-ignore
     await db.shift.deleteMany({
       where: {
         calendarEventId: { in: siblingEventIds },
@@ -202,14 +350,12 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     });
   } else {
     // Just delete this single shift
-    // @ts-ignore
     await db.shift.delete({
       where: { id: shiftId },
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`);
 }
 
 export async function updateShiftAction(
@@ -224,7 +370,6 @@ export async function updateShiftAction(
   const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
   if (!isAdmin) throw new Error("Unauthorized");
 
-  // @ts-ignore
   const shift = await db.shift.findUnique({
     where: { id: shiftId },
     include: {
@@ -232,7 +377,7 @@ export async function updateShiftAction(
         select: {
           id: true,
           recurringEventId: true,
-          scheduleId: true,
+          planId: true,
         },
       },
     },
@@ -247,7 +392,7 @@ export async function updateShiftAction(
     // @ts-ignore
     const siblingEvents = await db.calendarEvent.findMany({
       where: {
-        scheduleId: calendarEvent.scheduleId,
+        planId: calendarEvent.planId,
         recurringEventId: calendarEvent.recurringEventId,
       },
       select: { id: true },
@@ -256,7 +401,6 @@ export async function updateShiftAction(
     const siblingEventIds = siblingEvents.map((e: { id: string }) => e.id);
 
     // Update all shifts with the same role in the series
-    // @ts-ignore
     await db.shift.updateMany({
       where: {
         calendarEventId: { in: siblingEventIds },
@@ -267,14 +411,35 @@ export async function updateShiftAction(
       },
     });
   } else {
-    // @ts-ignore
     await db.shift.update({
       where: { id: shiftId },
       data: { name: newName },
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`);
+}
+
+export async function updatePlanStatusAction(
+  planId: string,
+  scheduleId: string,
+  status: "DRAFT" | "OPEN" | "PUBLISHED" | "COMPLETED"
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  await db.plan.update({
+    where: { id: planId },
+    data: { status },
+  });
+
+  if (status === "PUBLISHED") {
+    await autoScheduleAction(planId, scheduleId);
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`);
 }
 

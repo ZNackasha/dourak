@@ -39,7 +39,7 @@ export default async function SchedulesPage() {
                   {schedule.name}
                 </h2>
                 <p className="text-zinc-500 mt-1 text-sm">
-                  {schedule.startDate.toLocaleDateString(undefined, { dateStyle: 'medium' })} - {schedule.endDate.toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                  Manage plans and roles
                 </p>
               </div>
               <span className="text-zinc-400 group-hover:text-indigo-500">

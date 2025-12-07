@@ -43,8 +43,7 @@ export async function addVolunteerAction(formData: FormData) {
     },
   });
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
 export async function toggleAvailabilityAction(
@@ -78,17 +77,18 @@ export async function toggleAvailabilityAction(
     targetShiftId = shift.id;
   }
 
-  // Check existing assignment
-  const existing = await db.assignment.findFirst({
+  // Check existing availability
+  const existing = await db.availability.findUnique({
     where: {
-      shiftId: targetShiftId,
-      userId: userId,
+      shiftId_userId: {
+        shiftId: targetShiftId,
+        userId: userId,
+      },
     },
   });
 
   if (existing) {
-    // If confirmed, maybe don't allow removing? For now, allow removing.
-    await db.assignment.delete({
+    await db.availability.delete({
       where: { id: existing.id },
     });
   } else {
@@ -115,18 +115,15 @@ export async function toggleAvailabilityAction(
       }
     }
 
-    await db.assignment.create({
+    await db.availability.create({
       data: {
         shiftId: targetShiftId,
         userId: userId,
-        email: session.user.email,
-        status: "AVAILABLE",
       },
     });
   }
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
 export async function confirmAssignmentAction(
@@ -145,8 +142,44 @@ export async function confirmAssignmentAction(
     data: { status: "CONFIRMED" },
   });
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+export async function assignVolunteerAction(
+  shiftId: string,
+  userId: string,
+  scheduleId: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  // Create Assignment
+  await db.assignment.create({
+    data: {
+      shiftId,
+      userId,
+      status: "CONFIRMED",
+    },
+  });
+
+  // Remove availability
+  try {
+    await db.availability.delete({
+      where: {
+        shiftId_userId: {
+          shiftId,
+          userId,
+        },
+      },
+    });
+  } catch (e) {
+    // Ignore if not found
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
 export async function adminAssignVolunteerAction(
@@ -171,8 +204,7 @@ export async function adminAssignVolunteerAction(
     },
   });
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
 export async function volunteerForMultipleEventsAction(
@@ -206,11 +238,13 @@ export async function volunteerForMultipleEventsAction(
       targetShiftId = shift.id;
     }
 
-    // Check existing assignment
-    const existing = await db.assignment.findFirst({
+    // Check existing availability
+    const existing = await db.availability.findUnique({
       where: {
-        shiftId: targetShiftId,
-        userId: userId,
+        shiftId_userId: {
+          shiftId: targetShiftId,
+          userId: userId,
+        },
       },
     });
 
@@ -236,18 +270,15 @@ export async function volunteerForMultipleEventsAction(
         }
       }
 
-      await db.assignment.create({
+      await db.availability.create({
         data: {
           shiftId: targetShiftId,
           userId: userId,
-          email: session.user.email,
-          status: "AVAILABLE",
         },
       });
     }
   }
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
-  revalidatePath(`/schedules/${scheduleId}/view`);
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { createRoleAction, addUserToRoleAction, removeUserFromRoleAction, updateRoleAction } from "@/app/actions/role";
-import { useState } from "react";
+import { createRoleAction, addUserToRoleAction, removeUserFromRoleAction, updateRoleAction, regenerateRoleInviteTokenAction } from "@/app/actions/role";
+import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 export function RoleManager({ roles, scheduleId }: { roles: any[], scheduleId: string }) {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -103,6 +104,11 @@ export function RoleManager({ roles, scheduleId }: { roles: any[], scheduleId: s
 
 function RoleDetails({ role }: { role: any }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   if (!role) return null;
 
@@ -211,6 +217,65 @@ function RoleDetails({ role }: { role: any }) {
       </div>
 
       <div className="p-6 space-y-8">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+            <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
+            Invite Link
+          </h3>
+          <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100">
+            {role.inviteToken && origin ? (
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="bg-white p-2 rounded-lg border border-zinc-200 shadow-sm w-fit">
+                  <QRCodeSVG
+                    value={`${origin}/invites/${role.inviteToken}`}
+                    size={120}
+                  />
+                </div>
+                <div className="flex-1 space-y-3">
+                  <p className="text-sm text-zinc-600">
+                    Share this link or QR code with volunteers. When they visit it, they will be automatically added to the <strong>{role.name}</strong> role.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      value={`${origin}/invites/${role.inviteToken}`}
+                      className="flex-1 rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 bg-white text-zinc-500"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${origin}/invites/${role.inviteToken}`);
+                      }}
+                      className="bg-white border border-zinc-200 text-zinc-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-zinc-50 shadow-sm transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => regenerateRoleInviteTokenAction(role.id)}
+                    className="text-xs text-zinc-400 hover:text-zinc-600 underline"
+                  >
+                    Reset Invite Link
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-zinc-500 mb-3">
+                  {role.inviteToken ? "Loading invite link..." : "No invite link generated for this role."}
+                </p>
+                {!role.inviteToken && (
+                  <button
+                    onClick={() => regenerateRoleInviteTokenAction(role.id)}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors"
+                  >
+                    Generate Invite Link
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div>
           <h3 className="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
             <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>

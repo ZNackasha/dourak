@@ -14,3 +14,4 @@ export async function isScheduleAdmin(scheduleId: string, userId: string) {
 
   return schedule.userId === userId || schedule.admins.length > 0;
 }
+

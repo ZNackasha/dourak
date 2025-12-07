@@ -44,7 +44,7 @@ export async function addAdminAction(formData: FormData) {
     },
   });
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}`);
 }
 
 export async function removeAdminAction(scheduleId: string, userId: string) {
@@ -64,5 +64,6 @@ export async function removeAdminAction(scheduleId: string, userId: string) {
     },
   });
 
-  revalidatePath(`/schedules/${scheduleId}/admin`);
+  revalidatePath(`/schedules/${scheduleId}`);
 }
+

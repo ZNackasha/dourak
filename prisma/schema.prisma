@@ -24,6 +24,7 @@ model User {
   sessions       Session[]
   schedules      Schedule[]
   assignments    Assignment[]
+  availabilities Availability[]
   roles          UserRole[]
   adminSchedules ScheduleAdmin[]
 }
@@ -80,6 +81,7 @@ model Role {
   type        String   @default("required") // "required" or "optional"
   description String?
   color       String?  @db.VarChar(12)
+  inviteToken String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   shifts      Shift[]
@@ -94,30 +96,51 @@ model Role {
 model Schedule {
   id               String          @id @default(cuid())
   name             String
-  startDate        DateTime
-  endDate          DateTime
   googleCalendarId String
   userId           String
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events           CalendarEvent[]
+  plans            Plan[]
   roles            Role[]
   admins           ScheduleAdmin[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
 
+model Plan {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    ScheduleStatus @default(DRAFT)
+  
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  events     CalendarEvent[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ScheduleStatus {
+  DRAFT
+  OPEN
+  PUBLISHED
+  COMPLETED
+}
+
 model CalendarEvent {
   id               String   @id @default(cuid())
   googleEventId    String
-  scheduleId       String
-  schedule         Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  planId           String
+  plan             Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   title            String
   start            DateTime
   end              DateTime
   recurringEventId String?
   shifts           Shift[]
 
-  @@unique([scheduleId, googleEventId])
+  @@unique([planId, googleEventId])
 }
 
 model Shift {
@@ -128,6 +151,18 @@ model Shift {
   role            Role?         @relation(fields: [roleId], references: [id])
   name            String?       // Optional override for the role name
   assignments     Assignment[]
+  availabilities  Availability[]
+}
+
+model Availability {
+  id        String   @id @default(cuid())
+  shiftId   String
+  shift     Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([shiftId, userId])
 }
 
 model Assignment {

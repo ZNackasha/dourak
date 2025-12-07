@@ -38,34 +38,6 @@ export function CreateScheduleForm({ calendars }: { calendars: any[] }) {
         <p className="text-xs text-zinc-500">Events will be synced from this Google Calendar.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label htmlFor="startDate" className="block text-sm font-medium text-zinc-700">
-            Start Date
-          </label>
-          <input
-            type="date"
-            name="startDate"
-            id="startDate"
-            required
-            className="w-full rounded-lg border-zinc-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="endDate" className="block text-sm font-medium text-zinc-700">
-            End Date
-          </label>
-          <input
-            type="date"
-            name="endDate"
-            id="endDate"
-            required
-            className="w-full rounded-lg border-zinc-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
-          />
-        </div>
-      </div>
-
       <div className="pt-2">
         <button
           type="submit"
