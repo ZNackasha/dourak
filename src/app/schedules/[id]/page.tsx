@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { isScheduleAdmin } from "@/lib/permissions";
 import { AdminManager } from "@/components/admin-manager";
+import { DeleteScheduleButton } from "@/components/delete-schedule-button";
 
 export default async function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -58,6 +59,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             >
               Create New Plan
             </Link>
+            <DeleteScheduleButton scheduleId={id} />
           </div>
         )}
       </div>
@@ -84,8 +86,8 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
                   {plan.startDate.toLocaleDateString(undefined, { dateStyle: 'medium' })} - {plan.endDate.toLocaleDateString(undefined, { dateStyle: 'medium' })}
                 </p>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${plan.status === 'OPEN' ? 'bg-green-100 text-green-800' :
-                    plan.status === 'PUBLISHED' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
+                  plan.status === 'PUBLISHED' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
                   {plan.status}
                 </span>

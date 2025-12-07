@@ -150,6 +150,7 @@ model Shift {
   roleId          String?
   role            Role?         @relation(fields: [roleId], references: [id])
   name            String?       // Optional override for the role name
+  needed          Int           @default(1)
   assignments     Assignment[]
   availabilities  Availability[]
 }

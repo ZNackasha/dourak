@@ -101,6 +101,7 @@ export async function autoScheduleAction(planId: string, scheduleId: string) {
           userId: a.userId,
           status: a.status,
         })),
+        needed: shift.needed,
       });
     }
   }
@@ -131,6 +132,36 @@ export async function autoScheduleAction(planId: string, scheduleId: string) {
 
   revalidatePath(`/schedules/${scheduleId}`);
   return { count: results.length };
+}
+
+export async function deletePlanAction(planId: string, scheduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  await db.plan.delete({
+    where: { id: planId },
+  });
+
+  revalidatePath(`/schedules/${scheduleId}`);
+  redirect(`/schedules/${scheduleId}`);
+}
+
+export async function deleteScheduleAction(scheduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  await db.schedule.delete({
+    where: { id: scheduleId },
+  });
+
+  revalidatePath("/schedules");
+  redirect("/schedules");
 }
 
 export async function getCalendarsAction() {
@@ -237,8 +268,14 @@ export async function addShiftAction(formData: FormData) {
   const eventId = formData.get("eventId") as string;
   const roleId = formData.get("roleId") as string;
   const scheduleId = formData.get("scheduleId") as string;
+  const needed = parseInt(formData.get("needed") as string) || 1;
 
-  console.log("addShiftAction called with:", { eventId, roleId, scheduleId });
+  console.log("addShiftAction called with:", {
+    eventId,
+    roleId,
+    scheduleId,
+    needed,
+  });
 
   if (!eventId || !roleId || !scheduleId) {
     console.error("Missing fields in addShiftAction");
@@ -294,6 +331,7 @@ export async function addShiftAction(formData: FormData) {
       data: eventsToCreateFor.map((id) => ({
         calendarEventId: id,
         roleId: roleId,
+        needed: needed,
       })),
     });
   }
@@ -361,7 +399,7 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
 export async function updateShiftAction(
   shiftId: string,
   scheduleId: string,
-  newName: string
+  data: { name?: string; needed?: number }
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -407,13 +445,17 @@ export async function updateShiftAction(
         roleId: roleId,
       },
       data: {
-        name: newName,
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.needed !== undefined && { needed: data.needed }),
       },
     });
   } else {
     await db.shift.update({
       where: { id: shiftId },
-      data: { name: newName },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.needed !== undefined && { needed: data.needed }),
+      },
     });
   }
 

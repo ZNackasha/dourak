@@ -147,5 +147,65 @@ describe("Scheduler Algorithm", () => {
     expect(result).toHaveLength(1);
     expect(result[0].userId).toBe("uReq");
   });
+
+  it("should fill multiple slots when needed > 1", () => {
+    const event: SchedulerEvent = {
+      id: "s1",
+      roleId: roleGuitar,
+      start: baseTime,
+      end: hourLater,
+      assignments: [],
+      needed: 3, // Need 3 guitarists
+    };
+
+    const u1: SchedulerUser = {
+      id: "u1",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+    const u2: SchedulerUser = {
+      id: "u2",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+    const u3: SchedulerUser = {
+      id: "u3",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+
+    const result = generateSchedule([event], [u1, u2, u3]);
+
+    // Should assign all 3 users to the same event
+    expect(result).toHaveLength(3);
+    expect(result.every((r) => r.eventId === "s1")).toBe(true);
+
+    // All assignments should be unique users
+    const assignedUsers = new Set(result.map((r) => r.userId));
+    expect(assignedUsers.size).toBe(3);
+  });
+
+  it("should respect existing confirmed assignments when needed > 1", () => {
+    const event: SchedulerEvent = {
+      id: "s1",
+      roleId: roleGuitar,
+      start: baseTime,
+      end: hourLater,
+      assignments: [{ userId: "u1", status: "CONFIRMED" }], // 1 already assigned
+      needed: 3, // Need 3 total
+    };
+
+    const u2: SchedulerUser = {
+      id: "u2",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+    const u3: SchedulerUser = {
+      id: "u3",
+      roles: [{ roleId: roleGuitar, type: "required" }],
+    };
+
+    const result = generateSchedule([event], [u2, u3]);
+
+    // Should only assign 2 more (3 needed - 1 confirmed = 2 slots)
+    expect(result).toHaveLength(2);
+    expect(result.every((r) => r.eventId === "s1")).toBe(true);
+  });
 });
 

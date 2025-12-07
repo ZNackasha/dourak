@@ -138,29 +138,37 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
   const isAvailable = shift.availabilities?.some((a: any) => a.userId === currentUserId);
   const roleId = shift.roleId || shift.role?.id;
   const canVolunteer = userRoleIds.includes(roleId);
+  const needed = shift.needed || 1;
+  const assignedCount = shift.assignments.length;
+  const isFull = assignedCount >= needed;
 
   if (!isOwner && !canVolunteer && !isAssigned && !isAvailable) return null;
 
   return (
     <div className="relative flex items-center group/role">
       <button
-        onClick={() => !isOwner && toggleAvailabilityAction(event.id, scheduleId, shift.id)}
-        disabled={isOwner}
+        onClick={() => !isOwner && !isFull && toggleAvailabilityAction(event.id, scheduleId, shift.id)}
+        disabled={isOwner || (isFull && !isAssigned)}
         className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isAssigned
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
           : isAvailable
             ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
-            : canVolunteer
-              ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
-              : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
+            : isFull
+              ? "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
+              : canVolunteer
+                ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+                : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
           }`}
-        title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
+        title={!canVolunteer && !isOwner ? "You do not have this role" : isFull ? "Position Full" : ""}
       >
         <div
           className="w-2 h-2 rounded-full ring-1 ring-black/5"
           style={{ backgroundColor: shift.role.color || '#ccc' }}
         />
         {shift.name || shift.role.name}
+        <span className="ml-1 text-[10px] opacity-70">
+          ({assignedCount}/{needed})
+        </span>
         {isAssigned && " ✓"}
         {isAvailable && !isAssigned && " (Available)"}
       </button>
@@ -168,9 +176,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
       {isOwner && <AdminRoleActions shift={shift} scheduleId={scheduleId} />}
     </div>
   );
-}
-
-function AdminRoleActions({ shift, scheduleId }: any) {
+} function AdminRoleActions({ shift, scheduleId }: any) {
   return (
     <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-2 hidden group-hover/role:block z-10">
       <div className="flex items-center bg-white shadow-xl border border-zinc-100 rounded-lg p-1 min-w-max">
@@ -193,7 +199,7 @@ function AdminRoleActions({ shift, scheduleId }: any) {
           onClick={async () => {
             const newName = prompt("Enter new name for this position:", shift.name || shift.role.name);
             if (newName && newName.trim() !== "") {
-              await updateShiftAction(shift.id, scheduleId, newName.trim());
+              await updateShiftAction(shift.id, scheduleId, { name: newName.trim() });
             }
           }}
           className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-md transition-all"
@@ -201,6 +207,20 @@ function AdminRoleActions({ shift, scheduleId }: any) {
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+        <button
+          onClick={async () => {
+            const newNeeded = prompt("Enter number of volunteers needed:", shift.needed || 1);
+            if (newNeeded && !isNaN(parseInt(newNeeded))) {
+              await updateShiftAction(shift.id, scheduleId, { needed: parseInt(newNeeded) });
+            }
+          }}
+          className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-all"
+          title="Change Needed Count"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
           </svg>
         </button>
         <button
@@ -247,16 +267,26 @@ function AddPositionButton({ eventId, scheduleId, allRoles }: any) {
             <input type="hidden" name="scheduleId" value={scheduleId} />
             <label className="block text-xs font-medium text-zinc-500 mb-2">Select Role</label>
             {allRoles.length > 0 ? (
-              <select
-                name="roleId"
-                className="w-full text-sm border-zinc-200 rounded-md text-zinc-700 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-                size={5}
-              >
-                {allRoles.map((role: any) => (
-                  <option key={role.id} value={role.id} className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded">{role.name}</option>
-                ))}
-              </select>
+              <>
+                <select
+                  name="roleId"
+                  className="w-full text-sm border-zinc-200 rounded-md text-zinc-700 focus:ring-indigo-500 focus:border-indigo-500 mb-3"
+                  required
+                  size={5}
+                >
+                  {allRoles.map((role: any) => (
+                    <option key={role.id} value={role.id} className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded">{role.name}</option>
+                  ))}
+                </select>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Needed Count</label>
+                <input
+                  type="number"
+                  name="needed"
+                  defaultValue={1}
+                  min={1}
+                  className="w-full text-sm border-zinc-200 rounded-md text-zinc-700 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </>
             ) : (
               <div className="text-xs text-zinc-400 mb-3 italic">
                 No roles available. <a href={`/schedules/${scheduleId}/roles`} className="text-indigo-600 hover:underline">Create roles</a> in settings first.
@@ -370,9 +400,15 @@ function AvailableVolunteersList({ shifts, scheduleId }: any) {
 }
 
 function GenericAvailabilityButton({ event, scheduleId, isOwner, currentUserId }: any) {
+  const genericShift = event.shifts.find((s: any) => !s.roleId);
+  const needed = genericShift?.needed || 1;
+  const assignedCount = genericShift?.assignments?.length || 0;
+  const isFull = assignedCount >= needed;
+
   const availabilities = event.shifts.flatMap((shift: any) => shift.availabilities || []);
   const myAvailability = availabilities.find((a: any) => a.userId === currentUserId);
   const isAvailable = !!myAvailability;
+  const isAssigned = genericShift?.assignments?.some((a: any) => a.userId === currentUserId);
 
   if (isOwner) return null;
 
@@ -389,13 +425,19 @@ function GenericAvailabilityButton({ event, scheduleId, isOwner, currentUserId }
 
   return (
     <button
-      onClick={() => toggleAvailabilityAction(event.id, scheduleId)}
+      onClick={() => (!isFull || isAvailable) && toggleAvailabilityAction(event.id, scheduleId)}
+      disabled={isFull && !isAvailable && !isAssigned}
       className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm ${isAvailable
         ? "bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-        : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600"
+        : isFull
+          ? "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-200 cursor-not-allowed"
+          : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600"
         }`}
     >
       {isAvailable ? "Cancel" : "I'm Available"}
+      <span className="ml-1 text-[10px] opacity-70">
+        ({assignedCount}/{needed})
+      </span>
     </button>
   );
 }

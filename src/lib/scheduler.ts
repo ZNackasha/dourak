@@ -4,6 +4,7 @@ export type SchedulerEvent = {
   start: Date;
   end: Date;
   assignments: { userId: string | null; status: string }[];
+  needed?: number;
 };
 
 export type UserRole = {
@@ -35,27 +36,37 @@ export function generateSchedule(
 
   for (const event of events) {
     // Check for confirmed assignments
-    const confirmed = event.assignments.find(
+    const confirmedAssignments = event.assignments.filter(
       (a) => a.status === "CONFIRMED" && a.userId
     );
-    if (confirmed && confirmed.userId) {
-      // Mark user as busy
-      const busy = globalBusyMap.get(confirmed.userId) || [];
-      busy.push({ start: event.start, end: event.end });
-      globalBusyMap.set(confirmed.userId, busy);
 
-      // Increment load
-      initialUserLoads.set(
-        confirmed.userId,
-        (initialUserLoads.get(confirmed.userId) || 0) + 1
-      );
-      continue; // Don't schedule this event
+    // Mark confirmed users as busy
+    for (const confirmed of confirmedAssignments) {
+      if (confirmed.userId) {
+        const busy = globalBusyMap.get(confirmed.userId) || [];
+        busy.push({ start: event.start, end: event.end });
+        globalBusyMap.set(confirmed.userId, busy);
+
+        // Increment load
+        initialUserLoads.set(
+          confirmed.userId,
+          (initialUserLoads.get(confirmed.userId) || 0) + 1
+        );
+      }
     }
 
-    const dayKey = event.start.toDateString();
-    const dayList = eventsByDay.get(dayKey) || [];
-    dayList.push(event);
-    eventsByDay.set(dayKey, dayList);
+    const needed = event.needed || 1;
+    const slotsToFill = Math.max(0, needed - confirmedAssignments.length);
+
+    if (slotsToFill > 0) {
+      const dayKey = event.start.toDateString();
+      const dayList = eventsByDay.get(dayKey) || [];
+      // Add the event multiple times for each slot needed
+      for (let i = 0; i < slotsToFill; i++) {
+        dayList.push(event);
+      }
+      eventsByDay.set(dayKey, dayList);
+    }
   }
 
   const allResults: ScheduleResult[] = [];

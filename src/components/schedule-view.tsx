@@ -4,7 +4,7 @@ import { useState } from "react";
 import { EventCard } from "@/components/event-card";
 import { ScheduleMatrix } from "@/components/schedule-matrix";
 import { volunteerForMultipleEventsAction } from "@/app/actions/volunteer";
-import { updatePlanStatusAction } from "@/app/actions/schedule";
+import { updatePlanStatusAction, deletePlanAction } from "@/app/actions/schedule";
 
 interface ScheduleViewProps {
   schedule: any;
@@ -52,6 +52,17 @@ export function ScheduleView({
     navigator.clipboard.writeText(url);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleDeletePlan = async () => {
+    if (confirm("Are you sure you want to delete this plan? This action cannot be undone.")) {
+      try {
+        await deletePlanAction(plan.id, schedule.id);
+      } catch (error) {
+        console.error("Failed to delete plan:", error);
+        alert("Failed to delete plan");
+      }
+    }
   };
 
   const handleVolunteerAll = async (date: string, dateEvents: any[]) => {
@@ -216,6 +227,16 @@ export function ScheduleView({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
                   {isCopied ? "Copied!" : "Share"}
+                </button>
+
+                <button
+                  onClick={handleDeletePlan}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm flex-1 sm:flex-none"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
                 </button>
 
                 <button
