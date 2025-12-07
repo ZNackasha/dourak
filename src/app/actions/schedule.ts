@@ -156,9 +156,14 @@ export async function deleteScheduleAction(scheduleId: string) {
   const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
   if (!isAdmin) throw new Error("Unauthorized");
 
-  await db.schedule.delete({
-    where: { id: scheduleId },
-  });
+  try {
+    await db.schedule.delete({
+      where: { id: scheduleId },
+    });
+  } catch (error) {
+    console.error("Error deleting schedule:", error);
+    throw error;
+  }
 
   revalidatePath("/schedules");
   redirect("/schedules");
@@ -255,6 +260,57 @@ export async function createPlanAction(formData: FormData) {
     await db.calendarEvent.createMany({
       data: eventsToCreate,
     });
+
+    // Apply RecurringShift templates
+    const recurringIds = [
+      ...new Set(
+        eventsToCreate
+          .map((e: { recurringEventId: string | null }) => e.recurringEventId)
+          .filter((id: string | null): id is string => !!id)
+      ),
+    ] as string[];
+
+    if (recurringIds.length > 0) {
+      const templates = await db.recurringShift.findMany({
+        where: {
+          scheduleId: scheduleId,
+          recurringEventId: { in: recurringIds },
+        },
+      });
+
+      if (templates.length > 0) {
+        const createdEvents = await db.calendarEvent.findMany({
+          where: {
+            planId: plan.id,
+            recurringEventId: { in: recurringIds },
+          },
+          select: { id: true, recurringEventId: true },
+        });
+
+        const shiftsToCreate = [];
+        for (const event of createdEvents) {
+          if (!event.recurringEventId) continue;
+          const eventTemplates = templates.filter(
+            (t: { recurringEventId: string }) =>
+              t.recurringEventId === event.recurringEventId
+          );
+          for (const template of eventTemplates) {
+            shiftsToCreate.push({
+              calendarEventId: event.id,
+              roleId: template.roleId,
+              needed: template.needed,
+              name: template.name,
+            });
+          }
+        }
+
+        if (shiftsToCreate.length > 0) {
+          await db.shift.createMany({
+            data: shiftsToCreate,
+          });
+        }
+      }
+    }
   }
 
   revalidatePath(`/schedules/${scheduleId}`);
@@ -365,6 +421,28 @@ export async function addShiftAction(formData: FormData) {
     });
   }
 
+  // Update RecurringShift template if it's a recurring event
+  if (targetEvent.recurringEventId) {
+    // We use deleteMany + create instead of upsert to handle potential null roleId issues cleanly
+    // and ensure we overwrite the configuration
+    await db.recurringShift.deleteMany({
+      where: {
+        scheduleId,
+        recurringEventId: targetEvent.recurringEventId,
+        roleId: roleId,
+      },
+    });
+
+    await db.recurringShift.create({
+      data: {
+        scheduleId,
+        recurringEventId: targetEvent.recurringEventId,
+        roleId: roleId,
+        needed: needed,
+      },
+    });
+  }
+
   revalidatePath(`/schedules/${scheduleId}`);
 }
 
@@ -412,6 +490,15 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     await db.shift.deleteMany({
       where: {
         calendarEventId: { in: siblingEventIds },
+        roleId: roleId,
+      },
+    });
+
+    // Remove RecurringShift template
+    await db.recurringShift.deleteMany({
+      where: {
+        scheduleId,
+        recurringEventId: calendarEvent.recurringEventId,
         roleId: roleId,
       },
     });
@@ -478,6 +565,19 @@ export async function updateShiftAction(
         ...(data.needed !== undefined && { needed: data.needed }),
       },
     });
+
+    // Update RecurringShift template
+    await db.recurringShift.updateMany({
+      where: {
+        scheduleId,
+        recurringEventId: calendarEvent.recurringEventId,
+        roleId: roleId,
+      },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.needed !== undefined && { needed: data.needed }),
+      },
+    });
   } else {
     await db.shift.update({
       where: { id: shiftId },
@@ -509,6 +609,132 @@ export async function updatePlanStatusAction(
 
   if (status === "PUBLISHED") {
     await autoScheduleAction(planId, scheduleId);
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`);
+}
+
+export async function syncScheduleEventsAction(scheduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
+  if (!schedule) throw new Error("Schedule not found");
+
+  // 1. Find all non-completed plans
+  const plans = await db.plan.findMany({
+    where: {
+      scheduleId,
+      status: { not: "COMPLETED" },
+    },
+  });
+
+  for (const plan of plans) {
+    // 2. Fetch events from Google Calendar
+    const googleEvents = await listEvents(
+      session.user.id,
+      schedule.googleCalendarId,
+      plan.startDate,
+      plan.endDate
+    );
+
+    // 3. Fetch existing events from DB
+    const dbEvents = await db.calendarEvent.findMany({
+      where: { planId: plan.id },
+    });
+
+    const dbEventMap = new Map(dbEvents.map((e) => [e.googleEventId, e]));
+    const googleEventIds = new Set(googleEvents.map((e: any) => e.id));
+
+    // 4. Identify events to add
+    const eventsToAdd = googleEvents.filter((e: any) => !dbEventMap.has(e.id));
+
+    // 5. Identify events to remove
+    const eventsToRemove = dbEvents.filter(
+      (e) => !googleEventIds.has(e.googleEventId)
+    );
+
+    // 6. Remove events
+    if (eventsToRemove.length > 0) {
+      await db.calendarEvent.deleteMany({
+        where: {
+          id: { in: eventsToRemove.map((e) => e.id) },
+        },
+      });
+    }
+
+    // 7. Add events
+    if (eventsToAdd.length > 0) {
+      const eventsToCreate = eventsToAdd.map((ev: any) => ({
+        planId: plan.id,
+        googleEventId: ev.id,
+        title: ev.summary || "No Title",
+        start: new Date(ev.start.dateTime || ev.start.date),
+        end: new Date(ev.end.dateTime || ev.end.date),
+        recurringEventId: ev.recurringEventId || null,
+      }));
+
+      await db.calendarEvent.createMany({
+        data: eventsToCreate,
+      });
+
+      // Apply RecurringShift templates for newly created events
+      const recurringIds = [
+        ...new Set(
+          eventsToCreate
+            .map((e: { recurringEventId: string | null }) => e.recurringEventId)
+            .filter((id: string | null): id is string => !!id)
+        ),
+      ] as string[];
+
+      if (recurringIds.length > 0) {
+        const templates = await db.recurringShift.findMany({
+          where: {
+            scheduleId: scheduleId,
+            recurringEventId: { in: recurringIds },
+          },
+        });
+
+        if (templates.length > 0) {
+          // Fetch the newly created events to get their IDs
+          const createdEvents = await db.calendarEvent.findMany({
+            where: {
+              planId: plan.id,
+              recurringEventId: { in: recurringIds },
+              // Ensure we only get the ones we just added (or at least ones that match the google IDs we added)
+              googleEventId: { in: eventsToAdd.map((e: any) => e.id) },
+            },
+            select: { id: true, recurringEventId: true },
+          });
+
+          const shiftsToCreate = [];
+          for (const event of createdEvents) {
+            if (!event.recurringEventId) continue;
+            const eventTemplates = templates.filter(
+              (t: { recurringEventId: string }) =>
+                t.recurringEventId === event.recurringEventId
+            );
+            for (const template of eventTemplates) {
+              shiftsToCreate.push({
+                calendarEventId: event.id,
+                roleId: template.roleId,
+                needed: template.needed,
+                name: template.name,
+              });
+            }
+          }
+
+          if (shiftsToCreate.length > 0) {
+            await db.shift.createMany({
+              data: shiftsToCreate,
+            });
+          }
+        }
+      }
+    }
   }
 
   revalidatePath(`/schedules/${scheduleId}`);

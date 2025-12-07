@@ -5,6 +5,7 @@ import Link from "next/link";
 import { isScheduleAdmin } from "@/lib/permissions";
 import { AdminManager } from "@/components/admin-manager";
 import { DeleteScheduleButton } from "@/components/delete-schedule-button";
+import { SyncScheduleButton } from "@/components/sync-schedule-button";
 
 export default async function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -47,6 +48,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         </div>
         {isAdmin && (
           <div className="flex gap-3">
+            <SyncScheduleButton scheduleId={id} />
             <Link
               href={`/schedules/${id}/roles`}
               className="bg-white text-zinc-700 border border-zinc-300 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-zinc-50 shadow-sm transition-colors"

@@ -85,6 +85,7 @@ model Role {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   shifts      Shift[]
+  recurringShifts RecurringShift[]
   users       UserRole[]
   
   scheduleId  String?
@@ -101,6 +102,7 @@ model Schedule {
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   plans            Plan[]
   roles            Role[]
+  recurringShifts  RecurringShift[]
   admins           ScheduleAdmin[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -148,7 +150,7 @@ model Shift {
   calendarEventId String
   calendarEvent   CalendarEvent @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
   roleId          String?
-  role            Role?         @relation(fields: [roleId], references: [id])
+  role            Role?         @relation(fields: [roleId], references: [id], onDelete: SetNull)
   name            String?       // Optional override for the role name
   needed          Int           @default(1)
   assignments     Assignment[]
@@ -190,5 +192,21 @@ model ScheduleAdmin {
   createdAt  DateTime @default(now())
 
   @@id([scheduleId, userId])
+}
+
+model RecurringShift {
+  id               String   @id @default(cuid())
+  scheduleId       String
+  schedule         Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  recurringEventId String
+  roleId           String?
+  role             Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  name             String?
+  needed           Int      @default(1)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([scheduleId, recurringEventId, roleId])
 }
 

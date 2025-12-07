@@ -288,3 +288,48 @@ export async function volunteerForMultipleEventsAction(
   revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
+export async function cancelMultipleVolunteersAction(
+  scheduleId: string,
+  assignments: { eventId: string; shiftId?: string }[]
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const userId = session.user.id;
+
+  for (const { eventId, shiftId } of assignments) {
+    let targetShiftId = shiftId;
+
+    // If no specific shift provided, find generic Shift
+    if (!targetShiftId) {
+      const shift = await db.shift.findFirst({
+        where: {
+          calendarEventId: eventId,
+          roleId: null,
+        },
+      });
+      if (shift) {
+        targetShiftId = shift.id;
+      }
+    }
+
+    if (targetShiftId) {
+      // Remove availability
+      try {
+        await db.availability.delete({
+          where: {
+            shiftId_userId: {
+              shiftId: targetShiftId,
+              userId: userId,
+            },
+          },
+        });
+      } catch (e) {
+        // Ignore if not found
+      }
+    }
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+

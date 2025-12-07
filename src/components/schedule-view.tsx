@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { EventCard } from "@/components/event-card";
 import { ScheduleMatrix } from "@/components/schedule-matrix";
-import { volunteerForMultipleEventsAction } from "@/app/actions/volunteer";
+import { volunteerForMultipleEventsAction, cancelMultipleVolunteersAction } from "@/app/actions/volunteer";
 import { updatePlanStatusAction, deletePlanAction } from "@/app/actions/schedule";
 
 interface ScheduleViewProps {
@@ -65,48 +65,66 @@ export function ScheduleView({
     }
   };
 
-  const handleVolunteerAll = async (date: string, dateEvents: any[]) => {
+  const handleVolunteerAll = async (date: string, dateEvents: any[], action: "volunteer" | "cancel") => {
     setVolunteeringDate(date);
     try {
       const assignments: { eventId: string; shiftId?: string }[] = [];
 
       for (const event of dateEvents) {
-        // Check if already assigned
-        const isAssigned = event.shifts.some((shift: any) =>
-          shift.assignments.some((a: any) => a.userId === currentUserId)
-        );
-        if (isAssigned) continue;
+        if (action === "cancel") {
+          // Find shifts user is assigned/available for
+          const myShifts = event.shifts.filter((shift: any) =>
+            shift.assignments.some((a: any) => a.userId === currentUserId) ||
+            shift.availabilities?.some((a: any) => a.userId === currentUserId)
+          );
 
-        let targetShiftId: string | undefined = undefined;
-        let canVolunteer = false;
-
-        const matchingShift = event.shifts.find((shift: any) => {
-          const rId = shift.roleId || shift.role?.id;
-          return rId && activeUserRoleIds.includes(rId);
-        });
-
-        if (matchingShift) {
-          targetShiftId = matchingShift.id;
-          canVolunteer = true;
+          myShifts.forEach((s: any) => {
+            assignments.push({ eventId: event.id, shiftId: s.id });
+          });
         } else {
-          const genericShift = event.shifts.find((shift: any) => !shift.roleId);
-          if (genericShift) {
-            targetShiftId = genericShift.id;
-            canVolunteer = true;
-          } else if (event.shifts.length === 0) {
-            // No shifts defined, allow generic
-            targetShiftId = undefined;
-            canVolunteer = true;
-          }
-        }
+          // Volunteer logic
+          // Check if already assigned/available
+          const isAssigned = event.shifts.some((shift: any) =>
+            shift.assignments.some((a: any) => a.userId === currentUserId) ||
+            shift.availabilities?.some((a: any) => a.userId === currentUserId)
+          );
+          if (isAssigned) continue;
 
-        if (canVolunteer) {
-          assignments.push({ eventId: event.id, shiftId: targetShiftId });
+          let targetShiftId: string | undefined = undefined;
+          let canVolunteer = false;
+
+          const matchingShift = event.shifts.find((shift: any) => {
+            const rId = shift.roleId || shift.role?.id;
+            return rId && activeUserRoleIds.includes(rId);
+          });
+
+          if (matchingShift) {
+            targetShiftId = matchingShift.id;
+            canVolunteer = true;
+          } else {
+            const genericShift = event.shifts.find((shift: any) => !shift.roleId);
+            if (genericShift) {
+              targetShiftId = genericShift.id;
+              canVolunteer = true;
+            } else if (event.shifts.length === 0) {
+              // No shifts defined, allow generic
+              targetShiftId = undefined;
+              canVolunteer = true;
+            }
+          }
+
+          if (canVolunteer) {
+            assignments.push({ eventId: event.id, shiftId: targetShiftId });
+          }
         }
       }
 
       if (assignments.length > 0) {
-        await volunteerForMultipleEventsAction(schedule.id, assignments);
+        if (action === "volunteer") {
+          await volunteerForMultipleEventsAction(schedule.id, assignments);
+        } else {
+          await cancelMultipleVolunteersAction(schedule.id, assignments);
+        }
       }
     } finally {
       setVolunteeringDate(null);
@@ -293,19 +311,33 @@ export function ScheduleView({
       {viewMode === "cards" ? (
         <div className="space-y-10">
           {Object.entries(eventsByDate).map(([date, events]: any) => {
-            const canVolunteerForAny = events.some((event: any) => {
-              const isAssigned = event.shifts.some((shift: any) =>
-                shift.assignments.some((a: any) => a.userId === currentUserId)
-              );
-              if (isAssigned) return false;
+            let eligibleEventsCount = 0;
+            let volunteeredEventsCount = 0;
 
-              const hasMatchingShift = event.shifts.some((shift: any) => {
+            events.forEach((event: any) => {
+              const matchingShifts = event.shifts.filter((shift: any) => {
                 const rId = shift.roleId || shift.role?.id;
                 return (rId && activeUserRoleIds.includes(rId)) || !shift.roleId;
               });
 
-              return hasMatchingShift || event.shifts.length === 0;
+              const isGenericAllowed = event.shifts.length === 0;
+
+              if (matchingShifts.length > 0 || isGenericAllowed) {
+                eligibleEventsCount++;
+
+                const isVolunteered = matchingShifts.some((shift: any) =>
+                  shift.assignments.some((a: any) => a.userId === currentUserId) ||
+                  shift.availabilities?.some((a: any) => a.userId === currentUserId)
+                );
+
+                if (isVolunteered) {
+                  volunteeredEventsCount++;
+                }
+              }
             });
+
+            const isVolunteeredForAll = eligibleEventsCount > 0 && eligibleEventsCount === volunteeredEventsCount;
+            const canVolunteerForAny = eligibleEventsCount > 0;
 
             return (
               <div key={date} className="relative">
@@ -316,14 +348,18 @@ export function ScheduleView({
                   </h2>
                   {canVolunteerForAny && !activeIsOwner && currentUserId && (
                     <button
-                      onClick={() => handleVolunteerAll(date, events)}
+                      onClick={() => handleVolunteerAll(date, events, isVolunteeredForAll ? "cancel" : "volunteer")}
                       disabled={volunteeringDate === date}
-                      className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 bg-indigo-50 px-3 py-1 rounded-full transition-colors"
+                      className={`text-xs font-medium px-3 py-1 rounded-full transition-colors disabled:opacity-50 ${isVolunteeredForAll
+                        ? "text-red-600 hover:text-red-700 bg-red-50"
+                        : "text-indigo-600 hover:text-indigo-700 bg-indigo-50"
+                        }`}
                     >
                       {volunteeringDate === date
-                        ? "Signing up..."
-                        : "Volunteer for All"}
+                        ? (isVolunteeredForAll ? "Cancelling..." : "Signing up...")
+                        : (isVolunteeredForAll ? "Cancel All" : "Volunteer for All")}
                     </button>
+
                   )}
                 </div>
                 <div className="grid gap-4">
