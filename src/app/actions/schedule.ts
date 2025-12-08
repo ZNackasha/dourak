@@ -661,7 +661,7 @@ export async function updateShiftAction(
 export async function updatePlanStatusAction(
   planId: string,
   scheduleId: string,
-  status: "DRAFT" | "OPEN" | "PUBLISHED" | "COMPLETED"
+  status: "DRAFT" | "RECRUITMENT" | "SCHEDULED" | "ARCHIVED"
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -674,15 +674,20 @@ export async function updatePlanStatusAction(
     data: { status },
   });
 
-  if (status === "PUBLISHED") {
+  if (status === "SCHEDULED") {
     await autoScheduleAction(planId, scheduleId);
-    await sendPublishNotifications(planId);
   }
 
   revalidatePath(`/schedules/${scheduleId}`);
 }
 
-async function sendPublishNotifications(planId: string) {
+export async function sendScheduleNotificationsAction(planId: string, scheduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
   const plan = await db.plan.findUnique({
     where: { id: planId },
     include: { schedule: true },
@@ -778,11 +783,11 @@ export async function syncScheduleEventsAction(scheduleId: string) {
   const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
   if (!schedule) throw new Error("Schedule not found");
 
-  // 1. Find all non-completed plans
+  // 1. Find all non-archived plans
   const plans = await db.plan.findMany({
     where: {
       scheduleId,
-      status: { not: "COMPLETED" },
+      status: { not: "ARCHIVED" },
     },
   });
 

@@ -2,21 +2,32 @@
 
 import { deleteScheduleAction } from "@/app/actions/schedule";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function DeleteScheduleButton({ scheduleId }: { scheduleId: string }) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this schedule? This action cannot be undone.")) {
-      setIsDeleting(true);
-      try {
-        await deleteScheduleAction(scheduleId);
-      } catch (error) {
-        console.error("Failed to delete schedule:", error);
-        alert("Failed to delete schedule");
-        setIsDeleting(false);
+    toast("Are you sure you want to delete this schedule? This action cannot be undone.", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          setIsDeleting(true);
+          try {
+            await deleteScheduleAction(scheduleId);
+            toast.success("Schedule deleted");
+          } catch (error) {
+            console.error("Failed to delete schedule:", error);
+            toast.error("Failed to delete schedule");
+            setIsDeleting(false);
+          }
+        }
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => {}
       }
-    }
+    });
   };
 
   return (

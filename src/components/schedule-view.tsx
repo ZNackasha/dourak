@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { EventCard } from "@/components/event-card";
 import { ScheduleMatrix } from "@/components/schedule-matrix";
 import { volunteerForMultipleEventsAction, cancelMultipleVolunteersAction } from "@/app/actions/volunteer";
-import { updatePlanStatusAction, deletePlanAction } from "@/app/actions/schedule";
+import { updatePlanStatusAction, deletePlanAction, sendScheduleNotificationsAction } from "@/app/actions/schedule";
 
 interface ScheduleViewProps {
   schedule: any;
@@ -30,7 +31,7 @@ export function ScheduleView({
   const [volunteeringDate, setVolunteeringDate] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
-  const viewMode = (plan.status === "PUBLISHED" || plan.status === "COMPLETED") ? "matrix" : "cards";
+  const viewMode = (plan.status === "SCHEDULED" || plan.status === "ARCHIVED") ? "matrix" : "cards";
 
   const activeUserRoleIds = isImpersonating ? impersonatedRoleIds : initialUserRoleIds;
   const activeIsOwner = isImpersonating ? false : isOwner;
@@ -55,14 +56,45 @@ export function ScheduleView({
   };
 
   const handleDeletePlan = async () => {
-    if (confirm("Are you sure you want to delete this plan? This action cannot be undone.")) {
-      try {
-        await deletePlanAction(plan.id, schedule.id);
-      } catch (error) {
-        console.error("Failed to delete plan:", error);
-        alert("Failed to delete plan");
+    toast("Are you sure you want to delete this plan? This action cannot be undone.", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            await deletePlanAction(plan.id, schedule.id);
+            toast.success("Plan deleted");
+          } catch (error) {
+            console.error("Failed to delete plan:", error);
+            toast.error("Failed to delete plan");
+          }
+        }
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => {}
       }
-    }
+    });
+  };
+
+  const handleSendNotifications = async () => {
+    toast("Are you sure you want to send schedule notifications to all assigned users?", {
+      action: {
+        label: "Send",
+        onClick: async () => {
+          try {
+            await sendScheduleNotificationsAction(plan.id, schedule.id);
+            toast.success("Notifications sent successfully!");
+          } catch (error) {
+            console.error("Failed to send notifications:", error);
+            toast.error("Failed to send notifications");
+          }
+        }
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => {}
+      }
+    });
   };
 
   const handleVolunteerAll = async (date: string, dateEvents: any[], action: "volunteer" | "cancel") => {
@@ -239,20 +271,42 @@ export function ScheduleView({
                   }}
                 >
                   <option value="DRAFT">Draft (Hidden)</option>
-                  <option value="OPEN">Open (Volunteers)</option>
-                  <option value="PUBLISHED">Published (Final)</option>
-                  <option value="COMPLETED">Completed</option>
+                  <option value="RECRUITMENT">Recruitment</option>
+                  <option value="SCHEDULED">Scheduled ( Locked )</option>
+                  <option value="ARCHIVED">Archived (Hidden)</option>
                 </select>
 
-                <button
-                  onClick={handleShare}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm flex-1 sm:flex-none"
-                >
-                  <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                  {/* {isCopied ? "Copied!" : "Share"} */}
-                </button>
+                <div className="relative group/share">
+                  <button
+                    onClick={handleShare}
+                    disabled={plan.status === "DRAFT" || plan.status === "ARCHIVED"}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 shadow-sm flex-1 sm:flex-none transition-colors ${plan.status === "DRAFT" || plan.status === "ARCHIVED"
+                      ? "opacity-50 cursor-not-allowed bg-zinc-50"
+                      : "hover:bg-zinc-50 hover:border-zinc-300"
+                      }`}
+                  >
+                    <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </button>
+                  {(plan.status === "DRAFT" || plan.status === "ARCHIVED") && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-zinc-800 text-white text-xs rounded shadow-lg hidden group-hover/share:block text-center z-50 pointer-events-none">
+                      Users can only see plans that are Recruitment or Scheduled.
+                    </div>
+                  )}
+                </div>
+
+                {plan.status === "SCHEDULED" && (
+                  <button
+                    onClick={handleSendNotifications}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm flex-1 sm:flex-none"
+                    title="Send email notifications to assigned users"
+                  >
+                    <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                )}
 
                 <button
                   onClick={handleDeletePlan}
@@ -274,7 +328,7 @@ export function ScheduleView({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  {isImpersonating ? "Exit View" : "Volunteer View"}
+                  {isImpersonating ? "Exit View" : "User View"}
                 </button>
               </>
             )}
@@ -364,7 +418,7 @@ export function ScheduleView({
                     >
                       {volunteeringDate === date
                         ? (isVolunteeredForAll ? "Cancelling..." : "Signing up...")
-                        : (isVolunteeredForAll ? "Cancel All" : "Volunteer for All")}
+                        : (isVolunteeredForAll ? "Cancel All" : "Available for All")}
                     </button>
 
                   )}
@@ -379,6 +433,7 @@ export function ScheduleView({
                       currentUserId={currentUserId}
                       userRoleIds={activeUserRoleIds}
                       allRoles={allRoles}
+                      planStatus={plan.status}
                     />
                   ))}
                 </div>

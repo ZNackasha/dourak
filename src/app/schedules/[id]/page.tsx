@@ -93,8 +93,8 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
                 <p className="text-zinc-500 mt-1 text-sm">
                   {plan.startDate.toLocaleDateString(undefined, { dateStyle: 'medium' })} - {plan.endDate.toLocaleDateString(undefined, { dateStyle: 'medium' })}
                 </p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${plan.status === 'OPEN' ? 'bg-green-100 text-green-800' :
-                  plan.status === 'PUBLISHED' ? 'bg-blue-100 text-blue-800' :
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${plan.status === 'RECRUITMENT' ? 'bg-green-100 text-green-800' :
+                  plan.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                   {plan.status}

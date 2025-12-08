@@ -94,7 +94,7 @@ export function RoleManager({ roles, scheduleId }: { roles: any[], scheduleId: s
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <p className="font-medium">Select a role to manage volunteers</p>
+            <p className="font-medium">Select a role to manage users</p>
           </div>
         )}
       </div>
@@ -233,7 +233,7 @@ function RoleDetails({ role }: { role: any }) {
                 </div>
                 <div className="flex-1 space-y-3">
                   <p className="text-sm text-zinc-600">
-                    Share this link or QR code with volunteers. When they visit it, they will be automatically added to the <strong>{role.name}</strong> role.
+                    Share this link or QR code with users. When they visit it, they will be automatically added to the <strong>{role.name}</strong> role.
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -279,7 +279,7 @@ function RoleDetails({ role }: { role: any }) {
         <div>
           <h3 className="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
             <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
-            Add Volunteer
+            Add User
           </h3>
           <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100">
             <form action={addUserToRoleAction} className="space-y-3">
@@ -289,7 +289,7 @@ function RoleDetails({ role }: { role: any }) {
                   <input
                     name="email"
                     type="email"
-                    placeholder="volunteer@example.com"
+                    placeholder="user@example.com"
                     className="w-full rounded-lg border-zinc-200 shadow-sm text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
                     required
                   />

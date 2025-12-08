@@ -39,9 +39,9 @@ export default async function RolesPage({ params }: { params: Promise<{ id: stri
         <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
           <a href={`/schedules/${scheduleId}`} className="hover:text-zinc-900">← Back to Schedule</a>
         </div>
-        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Manage Roles & Volunteers</h1>
+        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Manage Roles & Users</h1>
         <p className="mt-2 text-zinc-500 max-w-2xl">
-          Define roles (positions) for <strong>{schedule.name}</strong> and assign volunteers to them.
+          Define roles (positions) for <strong>{schedule.name}</strong> and assign users to them.
         </p>
       </div>
 

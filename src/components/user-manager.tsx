@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { updateUserRoles } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type Role = {
 	id: string;
@@ -84,9 +85,10 @@ export function UserManager({
 
 			setEditingUserId(null);
 			router.refresh();
+			toast.success("Roles updated successfully");
 		} catch (error) {
 			console.error("Failed to update roles", error);
-			alert("Failed to update roles");
+			toast.error("Failed to update roles");
 		} finally {
 			setIsSaving(false);
 		}

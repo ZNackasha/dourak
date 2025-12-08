@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { syncScheduleEventsAction } from "@/app/actions/schedule";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export function SyncScheduleButton({ scheduleId }: { scheduleId: string }) {
 	const [isSyncing, setIsSyncing] = useState(false);
@@ -13,9 +14,10 @@ export function SyncScheduleButton({ scheduleId }: { scheduleId: string }) {
 			setIsSyncing(true);
 			await syncScheduleEventsAction(scheduleId);
 			router.refresh();
+			toast.success("Schedule synced successfully");
 		} catch (error) {
 			console.error("Failed to sync schedule:", error);
-			alert("Failed to sync schedule");
+			toast.error("Failed to sync schedule");
 		} finally {
 			setIsSyncing(false);
 		}

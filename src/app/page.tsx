@@ -20,7 +20,7 @@ export default async function Home() {
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Dourak</h1>
           <p className="text-lg text-zinc-500">
-            Coordinate volunteers with Google Calendar integration.
+            Coordinate users with Google Calendar integration.
           </p>
         </div>
 

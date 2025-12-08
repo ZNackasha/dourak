@@ -126,9 +126,9 @@ model Plan {
 
 enum ScheduleStatus {
   DRAFT
-  OPEN
-  PUBLISHED
-  COMPLETED
+  RECRUITMENT
+  SCHEDULED
+  ARCHIVED
 }
 
 model CalendarEvent {

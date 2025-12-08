@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dourak",
   description:
-    "Coordinate volunteers with Google Calendar integration",
+    "Coordinate users with Google Calendar integration",
 };
 
 export default function RootLayout({

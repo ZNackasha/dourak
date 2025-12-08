@@ -88,6 +88,7 @@ export async function toggleAvailabilityAction(
   });
 
   if (existing) {
+    // Remove availability
     await db.availability.delete({
       where: { id: existing.id },
     });
@@ -148,6 +149,25 @@ export async function confirmAssignmentAction(
   revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
+export async function unconfirmAssignmentAction(
+  assignmentId: string,
+  scheduleId: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Check admin permission
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  await db.assignment.update({
+    where: { id: assignmentId },
+    data: { status: "PENDING" },
+  });
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
 export async function assignVolunteerAction(
   shiftId: string,
   userId: string,
@@ -159,11 +179,20 @@ export async function assignVolunteerAction(
   const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
   if (!isAdmin) throw new Error("Unauthorized");
 
-  // Create Assignment
-  await db.assignment.create({
-    data: {
+  // Create or Update Assignment
+  await db.assignment.upsert({
+    where: {
+      shiftId_userId: {
+        shiftId,
+        userId,
+      },
+    },
+    create: {
       shiftId,
       userId,
+      status: "CONFIRMED",
+    },
+    update: {
       status: "CONFIRMED",
     },
   });
@@ -283,6 +312,33 @@ export async function volunteerForMultipleEventsAction(
         },
       });
     }
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+export async function adminRemoveAvailabilityAction(
+  shiftId: string,
+  userId: string,
+  scheduleId: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  try {
+    await db.availability.delete({
+      where: {
+        shiftId_userId: {
+          shiftId,
+          userId,
+        },
+      },
+    });
+  } catch (e) {
+    // Ignore if not found
   }
 
   revalidatePath(`/schedules/${scheduleId}`, "layout");

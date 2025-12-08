@@ -19,16 +19,6 @@ export default async function NewSchedulePage() {
         </div>
         <h1 className="text-3xl font-bold text-zinc-900 mb-4">Connect Google Calendar</h1>
 
-        <div className="mb-8 p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-left overflow-auto max-h-40 text-sm">
-          <p className="font-semibold mb-1 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Connection Error
-          </p>
-          <pre className="whitespace-pre-wrap font-mono text-xs opacity-90">{e.message}</pre>
-        </div>
-
         <p className="mb-8 text-zinc-600 max-w-md mx-auto">
           To create a schedule, we need access to your Google Calendar to fetch events and sync shifts.
         </p>
