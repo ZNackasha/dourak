@@ -52,6 +52,28 @@ export default async function PlanAdminPage({ params }: { params: Promise<{ id: 
 		orderBy: { name: "asc" },
 	});
 
+	// Fetch all users in the schedule for assignment
+	const scheduleUsers = await db.user.findMany({
+		where: {
+			OR: [
+				{ roles: { some: { role: { scheduleId: id } } } },
+				{ adminSchedules: { some: { scheduleId: id } } },
+				{ schedules: { some: { id: id } } } // Owner
+			]
+		},
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			image: true,
+			roles: {
+				where: { role: { scheduleId: id } },
+				select: { roleId: true }
+			}
+		},
+		orderBy: { name: 'asc' }
+	});
+
 	return (
 		<div className="space-y-8">
 			<div className="mt-1">
@@ -63,6 +85,7 @@ export default async function PlanAdminPage({ params }: { params: Promise<{ id: 
 					userRoleIds={userRoleIds}
 					allRoles={allRoles}
 					currentUserId={currentUserId}
+					scheduleUsers={scheduleUsers}
 				/>
 			</div>
 		</div>

@@ -302,30 +302,33 @@ export async function createPlanAction(prevState: any, formData: FormData) {
           ),
         ] as string[];
 
+        let templates: any[] = [];
         if (recurringIds.length > 0) {
-          const templates = await tx.recurringShift.findMany({
+          templates = await tx.recurringShift.findMany({
             where: {
               scheduleId: scheduleId,
               recurringEventId: { in: recurringIds },
             },
           });
+        }
 
-          if (templates.length > 0) {
-            const createdEvents = await tx.calendarEvent.findMany({
-              where: {
-                planId: plan.id,
-                recurringEventId: { in: recurringIds },
-              },
-              select: { id: true, recurringEventId: true },
-            });
+        const createdEvents = await tx.calendarEvent.findMany({
+          where: {
+            planId: plan.id,
+          },
+          select: { id: true, recurringEventId: true },
+        });
 
-            const shiftsToCreate = [];
-            for (const event of createdEvents) {
-              if (!event.recurringEventId) continue;
-              const eventTemplates = templates.filter(
-                (t: { recurringEventId: string }) =>
-                  t.recurringEventId === event.recurringEventId
-              );
+        const shiftsToCreate = [];
+        for (const event of createdEvents) {
+          let hasTemplates = false;
+          if (event.recurringEventId) {
+            const eventTemplates = templates.filter(
+              (t: { recurringEventId: string }) =>
+                t.recurringEventId === event.recurringEventId
+            );
+            if (eventTemplates.length > 0) {
+              hasTemplates = true;
               for (const template of eventTemplates) {
                 shiftsToCreate.push({
                   calendarEventId: event.id,
@@ -335,13 +338,22 @@ export async function createPlanAction(prevState: any, formData: FormData) {
                 });
               }
             }
-
-            if (shiftsToCreate.length > 0) {
-              await tx.shift.createMany({
-                data: shiftsToCreate,
-              });
-            }
           }
+
+          if (!hasTemplates) {
+            shiftsToCreate.push({
+              calendarEventId: event.id,
+              roleId: null,
+              needed: 1,
+              name: null,
+            });
+          }
+        }
+
+        if (shiftsToCreate.length > 0) {
+          await tx.shift.createMany({
+            data: shiftsToCreate,
+          });
         }
       }
       return plan.id;
@@ -453,11 +465,63 @@ export async function addShiftAction(formData: FormData) {
   });
 
   if (conflictingShifts.length > 0) {
-    throw new Error(
-      roleId
-        ? "Cannot add a specific role because a General Position already exists for this event series."
-        : "Cannot add a General Position because specific roles already exist for this event series."
-    );
+    if (roleId) {
+      // We are adding a specific role, but Any Role positions exist.
+      // We want to replace/convert them, BUT only if all currently available users
+      // actually have the new role.
+
+      // Check for any users who are available for these shifts but DO NOT have the new role.
+      const shiftsWithInvalidUsers = await db.shift.findMany({
+        where: {
+          id: { in: conflictingShifts.map((s) => s.id) },
+          availabilities: {
+            some: {
+              user: {
+                roles: {
+                  none: {
+                    roleId: roleId,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (shiftsWithInvalidUsers.length > 0) {
+        throw new Error(
+          "Cannot convert Any Role position to this role because some currently available users do not have this role."
+        );
+      }
+
+      // If safe, convert the General Shifts to the new Role
+      await db.shift.updateMany({
+        where: {
+          id: { in: conflictingShifts.map((s) => s.id) },
+        },
+        data: {
+          roleId: roleId,
+          needed: needed,
+        },
+      });
+
+      // Also clean up the Any Role position template if this is a recurring series
+      if (targetEvent.recurringEventId) {
+        await db.recurringShift.deleteMany({
+          where: {
+            scheduleId,
+            recurringEventId: targetEvent.recurringEventId,
+            roleId: null,
+          },
+        });
+      }
+    } else {
+      // We are trying to add an Any Role position, but specific roles exist.
+      // This direction is still blocked.
+      throw new Error(
+        "Cannot add an Any Role position because specific roles already exist for this event series."
+      );
+    }
   }
 
   // 3. Find which events already have this role assigned
@@ -561,6 +625,32 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
       },
     });
 
+    // Check for events that have no shifts left
+    const eventsWithShifts = await db.shift.findMany({
+      where: {
+        calendarEventId: { in: siblingEventIds },
+      },
+      select: { calendarEventId: true },
+      distinct: ["calendarEventId"],
+    });
+
+    const eventIdsWithShifts = new Set(
+      eventsWithShifts.map((s) => s.calendarEventId)
+    );
+    const eventsWithoutShifts = siblingEventIds.filter(
+      (id) => !eventIdsWithShifts.has(id)
+    );
+
+    if (eventsWithoutShifts.length > 0) {
+      await db.shift.createMany({
+        data: eventsWithoutShifts.map((id) => ({
+          calendarEventId: id,
+          roleId: null,
+          needed: 1,
+        })),
+      });
+    }
+
     // Remove RecurringShift template
     await db.recurringShift.deleteMany({
       where: {
@@ -574,6 +664,23 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     await db.shift.delete({
       where: { id: shiftId },
     });
+
+    // If we deleted a specific role and no shifts remain, restore "Any Role"
+    if (roleId) {
+      const remainingShifts = await db.shift.count({
+        where: { calendarEventId: calendarEvent.id },
+      });
+
+      if (remainingShifts === 0) {
+        await db.shift.create({
+          data: {
+            calendarEventId: calendarEvent.id,
+            roleId: null,
+            needed: 1,
+          },
+        });
+      }
+    }
   }
 
   revalidatePath(`/schedules/${scheduleId}`);
@@ -681,7 +788,10 @@ export async function updatePlanStatusAction(
   revalidatePath(`/schedules/${scheduleId}`);
 }
 
-export async function sendScheduleNotificationsAction(planId: string, scheduleId: string) {
+export async function sendScheduleNotificationsAction(
+  planId: string,
+  scheduleId: string
+) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
@@ -849,33 +959,36 @@ export async function syncScheduleEventsAction(scheduleId: string) {
         ),
       ] as string[];
 
+      let templates: any[] = [];
       if (recurringIds.length > 0) {
-        const templates = await db.recurringShift.findMany({
+        templates = await db.recurringShift.findMany({
           where: {
             scheduleId: scheduleId,
             recurringEventId: { in: recurringIds },
           },
         });
+      }
 
-        if (templates.length > 0) {
-          // Fetch the newly created events to get their IDs
-          const createdEvents = await db.calendarEvent.findMany({
-            where: {
-              planId: plan.id,
-              recurringEventId: { in: recurringIds },
-              // Ensure we only get the ones we just added (or at least ones that match the google IDs we added)
-              googleEventId: { in: eventsToAdd.map((e: any) => e.id) },
-            },
-            select: { id: true, recurringEventId: true },
-          });
+      // Fetch the newly created events to get their IDs
+      const createdEvents = await db.calendarEvent.findMany({
+        where: {
+          planId: plan.id,
+          // Ensure we only get the ones we just added
+          googleEventId: { in: eventsToAdd.map((e: any) => e.id) },
+        },
+        select: { id: true, recurringEventId: true },
+      });
 
-          const shiftsToCreate = [];
-          for (const event of createdEvents) {
-            if (!event.recurringEventId) continue;
-            const eventTemplates = templates.filter(
-              (t: { recurringEventId: string }) =>
-                t.recurringEventId === event.recurringEventId
-            );
+      const shiftsToCreate = [];
+      for (const event of createdEvents) {
+        let hasTemplates = false;
+        if (event.recurringEventId) {
+          const eventTemplates = templates.filter(
+            (t: { recurringEventId: string }) =>
+              t.recurringEventId === event.recurringEventId
+          );
+          if (eventTemplates.length > 0) {
+            hasTemplates = true;
             for (const template of eventTemplates) {
               shiftsToCreate.push({
                 calendarEventId: event.id,
@@ -885,13 +998,22 @@ export async function syncScheduleEventsAction(scheduleId: string) {
               });
             }
           }
-
-          if (shiftsToCreate.length > 0) {
-            await db.shift.createMany({
-              data: shiftsToCreate,
-            });
-          }
         }
+
+        if (!hasTemplates) {
+          shiftsToCreate.push({
+            calendarEventId: event.id,
+            roleId: null,
+            needed: 1,
+            name: null,
+          });
+        }
+      }
+
+      if (shiftsToCreate.length > 0) {
+        await db.shift.createMany({
+          data: shiftsToCreate,
+        });
       }
     }
   }

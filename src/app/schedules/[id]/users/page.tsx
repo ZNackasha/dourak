@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { getScheduleUsers } from "@/app/actions/users";
+import { getScheduleUsers } from "@/app/actions/user";
 import { UserManager } from "@/components/user-manager";
 import { redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";

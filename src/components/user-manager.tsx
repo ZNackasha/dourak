@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateUserRoles } from "@/app/actions/users";
+import { updateUserRoles } from "@/app/actions/user";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -139,8 +139,8 @@ export function UserManager({
 													key={role.id}
 													onClick={() => toggleRole(role.id)}
 													className={`inline-flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${selectedRoleIds.has(role.id)
-															? "bg-indigo-100 text-indigo-800 border-indigo-200"
-															: "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+														? "bg-indigo-100 text-indigo-800 border-indigo-200"
+														: "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
 														}`}
 												>
 													{role.name}

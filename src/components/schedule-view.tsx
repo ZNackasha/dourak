@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { EventCard } from "@/components/event-card";
 import { ScheduleMatrix } from "@/components/schedule-matrix";
-import { volunteerForMultipleEventsAction, cancelMultipleVolunteersAction } from "@/app/actions/volunteer";
+import { volunteerForMultipleEventsAction, cancelMultipleVolunteersAction } from "@/app/actions/assignment";
 import { updatePlanStatusAction, deletePlanAction, sendScheduleNotificationsAction } from "@/app/actions/schedule";
 
 interface ScheduleViewProps {
@@ -15,6 +15,7 @@ interface ScheduleViewProps {
   userRoleIds: string[];
   allRoles: any[];
   currentUserId: string;
+  scheduleUsers?: any[];
 }
 
 export function ScheduleView({
@@ -25,6 +26,7 @@ export function ScheduleView({
   userRoleIds: initialUserRoleIds,
   allRoles,
   currentUserId,
+  scheduleUsers = [],
 }: ScheduleViewProps) {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonatedRoleIds, setImpersonatedRoleIds] = useState<string[]>([]);
@@ -71,7 +73,7 @@ export function ScheduleView({
       },
       cancel: {
         label: "Cancel",
-        onClick: () => {}
+        onClick: () => { }
       }
     });
   };
@@ -92,7 +94,7 @@ export function ScheduleView({
       },
       cancel: {
         label: "Cancel",
-        onClick: () => {}
+        onClick: () => { }
       }
     });
   };
@@ -434,6 +436,7 @@ export function ScheduleView({
                       userRoleIds={activeUserRoleIds}
                       allRoles={allRoles}
                       planStatus={plan.status}
+                      scheduleUsers={scheduleUsers}
                     />
                   ))}
                 </div>

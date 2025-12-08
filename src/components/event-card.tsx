@@ -9,8 +9,10 @@ import {
   unconfirmAssignmentAction,
   adminAssignVolunteerAction,
   assignVolunteerAction,
-  adminRemoveAvailabilityAction
-} from "@/app/actions/volunteer";
+  adminRemoveAvailabilityAction,
+  adminAddAvailabilityAction,
+  adminAddEventAvailabilityAction
+} from "@/app/actions/assignment";
 import {
   addShiftAction,
   removeShiftAction,
@@ -38,7 +40,8 @@ export function EventCard({
   currentUserId,
   userRoleIds = [],
   allRoles = [],
-  planStatus
+  planStatus,
+  scheduleUsers = []
 }: {
   event: any,
   scheduleId: string,
@@ -46,7 +49,8 @@ export function EventCard({
   currentUserId: string,
   userRoleIds?: string[],
   allRoles?: any[],
-  planStatus?: string
+  planStatus?: string,
+  scheduleUsers?: any[]
 }) {
   const shifts = event.shifts;
   const hasRoles = shifts.some((s: any) => s.roleId);
@@ -56,7 +60,7 @@ export function EventCard({
     if (hasRoles) {
       const hasMatchingRole = shifts.some((s: any) => {
         const rId = s.roleId || s.role?.id;
-        // Match if user has the role OR if it's a general position (no role)
+        // Match if user has the role OR if it's an Any Role position (no role)
         return !rId || (rId && userRoleIds.includes(rId));
       });
       const isAssigned = shifts.some((s: any) => s.assignments.some((a: any) => a.userId === currentUserId));
@@ -71,6 +75,18 @@ export function EventCard({
   const seriesColor = event.recurringEventId
     ? getSeriesColor(event.recurringEventId)
     : "bg-zinc-100";
+
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+
+  const handleAddUser = async (emailOrName: string) => {
+    try {
+      await adminAddEventAvailabilityAction(event.id, scheduleId, emailOrName.trim());
+      toast.success("User added to availability");
+      setIsAddUserOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add user");
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-all duration-200 group flex">
@@ -97,6 +113,24 @@ export function EventCard({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-start sm:justify-end mt-1 sm:mt-0">
+            {isOwner && (
+              <>
+                <AddPositionButton
+                  eventId={event.id}
+                  scheduleId={scheduleId}
+                  allRoles={allRoles}
+                  existingShifts={event.shifts}
+                />
+                <button
+                  onClick={() => setIsAddUserOpen(true)}
+                  className="text-xs font-medium text-zinc-400 hover:text-violet-600 border border-dashed border-zinc-300 hover:border-violet-300 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Add Available User"
+                >
+                  + User
+                </button>
+              </>
+            )}
+
             {shifts.map((shift: any) => (
               <RoleItem
                 key={shift.id}
@@ -107,6 +141,7 @@ export function EventCard({
                 currentUserId={currentUserId}
                 userRoleIds={userRoleIds}
                 planStatus={planStatus}
+                scheduleUsers={scheduleUsers}
               />
             ))}
 
@@ -125,15 +160,6 @@ export function EventCard({
                 Available
               </button>
             )}
-
-            {isOwner && (
-              <AddPositionButton
-                eventId={event.id}
-                scheduleId={scheduleId}
-                allRoles={allRoles}
-                existingShifts={event.shifts}
-              />
-            )}
           </div>
         </div>
 
@@ -143,15 +169,25 @@ export function EventCard({
           scheduleId={scheduleId}
           planStatus={planStatus}
         />
+
+        {isAddUserOpen && (
+          <AddVolunteerDialog
+            isOpen={isAddUserOpen}
+            onClose={() => setIsAddUserOpen(false)}
+            onAdd={handleAddUser}
+            users={scheduleUsers}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleIds, planStatus }: any) {
+function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleIds, planStatus, scheduleUsers = [] }: any) {
   const initialIsAvailable = shift.availabilities?.some((a: any) => a.userId === currentUserId);
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
 
   useEffect(() => {
     setIsAvailable(shift.availabilities?.some((a: any) => a.userId === currentUserId));
@@ -162,6 +198,10 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
   const needed = shift.needed || 1;
   const assignedCount = shift.assignments.length;
 
+  const userAssignment = shift.assignments?.find((a: any) => a.userId === currentUserId);
+  const isConfirmed = userAssignment?.status === 'CONFIRMED';
+  const isAssigned = !!userAssignment;
+
   // For visibility: if not owner, check if they can volunteer OR have already volunteered
   if (!isOwner && !canVolunteer && !isAvailable) return null;
 
@@ -169,7 +209,8 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
     if (isOwner || isLoading) return;
 
     setIsLoading(true);
-    const nextState = !isAvailable;
+    const isParticipating = isAvailable || isAssigned;
+    const nextState = !isParticipating;
     setIsAvailable(nextState);
 
     try {
@@ -177,7 +218,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
       if (nextState) {
         toast.success("Marked as available");
       } else {
-        toast.success("Removed availability");
+        toast.success(isAssigned ? "Withdrawn from position" : "Removed availability");
       }
     } catch (error) {
       setIsAvailable(!nextState);
@@ -187,41 +228,130 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
     }
   };
 
+  const handleAssignUser = async (userId: string) => {
+    try {
+      await assignVolunteerAction(shift.id, userId, scheduleId);
+      toast.success("User assigned successfully");
+      setIsAssignUserOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to assign user");
+    }
+  };
+
+  const handleAssignManualName = async (name: string) => {
+    try {
+      await adminAssignVolunteerAction(shift.id, scheduleId, name.trim());
+      toast.success("User assigned successfully");
+      setIsAssignUserOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to assign user");
+    }
+  };
+
   return (
     <div className="relative flex items-center group/role">
-      <button
-        onClick={handleToggle}
-        disabled={isOwner || isLoading}
-        className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isAvailable
-            ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
-            : canVolunteer
-              ? "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
-              : "bg-zinc-50 text-zinc-400 ring-1 ring-zinc-100 cursor-not-allowed"
-          } ${isLoading ? "opacity-70 cursor-wait" : ""}`}
+      <div
+        role="button"
+        onClick={!isOwner ? handleToggle : undefined}
+        className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isConfirmed
+            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+            : isAssigned
+              ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+              : isAvailable
+                ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
+                : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer ? "cursor-pointer" : "cursor-default"}`}
         title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
       >
-        {!isOwner ? "Available" : (shift.name || shift.role?.name || "General Position")}
-        {isOwner && (
-          <span className="ml-1 text-[10px] opacity-70">
-            ({assignedCount}/{needed})
-          </span>
+        {!isOwner ? (
+          isConfirmed ? "Confirmed" :
+            isAssigned ? "Assigned" :
+              "Available"
+        ) : (
+          isOwner && shift.assignments.length > 0 ? (
+            <div className="flex items-center gap-2">
+              {shift.assignments.map((assignment: any) => (
+                <div key={assignment.id} className="flex items-center gap-1 bg-white/50 px-1.5 py-0.5 rounded border border-zinc-200/50">
+                  <span>{assignment.name || assignment.email || assignment.user?.email}</span>
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
+                    title={assignment.status}
+                  />
+                  {assignment.status === 'PENDING' && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await confirmAssignmentAction(assignment.id, scheduleId);
+                          toast.success("Confirmed");
+                        } catch { toast.error("Failed"); }
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 font-bold px-1 hover:bg-indigo-50 rounded"
+                    >✓</button>
+                  )}
+                  {assignment.status === 'CONFIRMED' && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await unconfirmAssignmentAction(assignment.id, scheduleId);
+                          toast.success("Unconfirmed");
+                        } catch { toast.error("Failed"); }
+                      }}
+                      className="text-amber-600 hover:text-amber-800 font-bold px-1 hover:bg-amber-50 rounded"
+                    >↺</button>
+                  )}
+                </div>
+              ))}
+              <span className="flex items-center">
+                {shift.name || shift.role?.name || "Any Role"}
+                <span className="ml-1 text-[10px] opacity-70">
+                  ({assignedCount}/{needed})
+                </span>
+              </span>
+            </div>
+          ) : (
+            <>
+              {shift.name || shift.role?.name || "Any Role"}
+              {isOwner && (
+                <span className="ml-1 text-[10px] opacity-70">
+                  ({assignedCount}/{needed})
+                </span>
+              )}
+            </>
+          )
         )}
-      </button>
+      </div>
 
-      {isOwner && <AdminRoleActions shift={shift} scheduleId={scheduleId} planStatus={planStatus} />}
+      {isOwner && (
+        <>
+          <AdminRoleActions
+            shift={shift}
+            scheduleId={scheduleId}
+            planStatus={planStatus}
+            onOpenAssignUser={() => setIsAssignUserOpen(true)}
+          />
+          {isAssignUserOpen && (
+            <AssignVolunteerDialog
+              isOpen={isAssignUserOpen}
+              onClose={() => setIsAssignUserOpen(false)}
+              onAssignUser={handleAssignUser}
+              onAssignManual={handleAssignManualName}
+              users={scheduleUsers}
+              roleId={roleId}
+            />
+          )}
+        </>
+      )}
     </div>
   );
-} function AdminRoleActions({ shift, scheduleId, planStatus }: any) {
+}
+function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser }: any) {
   return (
     <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-2 hidden group-hover/role:block z-10">
       <div className="flex items-center bg-white shadow-xl border border-zinc-100 rounded-lg p-1 min-w-max">
         <button
-          onClick={async () => {
-            const name = prompt("Enter name of user to assign:");
-            if (name && name.trim() !== "") {
-              await adminAssignVolunteerAction(shift.id, scheduleId, name.trim());
-            }
-          }}
+          onClick={onOpenAssignUser}
           className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-md transition-all"
           title="Assign User"
         >
@@ -232,7 +362,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
         <div className="w-px h-4 bg-zinc-100 mx-0.5"></div>
         <button
           onClick={async () => {
-            const newName = prompt("Enter new name for this position:", shift.name || shift.role?.name || "General Position");
+            const newName = prompt("Enter new name for this position:", shift.name || shift.role?.name || "Any Role");
             if (newName && newName.trim() !== "") {
               await updateShiftAction(shift.id, scheduleId, { name: newName.trim() });
             }
@@ -270,7 +400,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
               },
               cancel: {
                 label: "Cancel",
-                onClick: () => {}
+                onClick: () => { }
               }
             });
           }}
@@ -281,6 +411,151 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+      </div>
+    </div>
+  );
+}
+
+function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, users, roleId }: any) {
+  const [name, setName] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+
+  if (!isOpen) return null;
+
+  // Filter users who have this role
+  const eligibleUsers = roleId
+    ? users.filter((u: any) => u.roles?.some((r: any) => r.roleId === roleId))
+    : users; // If no role (Any Role position), show all users
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+        <h3 className="text-lg font-semibold mb-4">Assign User to Role</h3>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Select User with Role</label>
+          <select
+            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            value={selectedUserId}
+            onChange={(e) => {
+              setSelectedUserId(e.target.value);
+              if (e.target.value) setName("");
+            }}
+          >
+            <option value="">-- Select a user --</option>
+            {eligibleUsers.map((u: any) => (
+              <option key={u.id} value={u.id}>{u.name || u.email}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-zinc-200"></div>
+          <span className="flex-shrink-0 mx-4 text-zinc-400 text-xs">OR</span>
+          <div className="flex-grow border-t border-zinc-200"></div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Enter Name Manually</label>
+          <input
+            type="text"
+            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="John Doe"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (e.target.value) setSelectedUserId("");
+            }}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 rounded-md hover:bg-zinc-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (selectedUserId) {
+                onAssignUser(selectedUserId);
+              } else if (name) {
+                onAssignManual(name);
+              }
+            }}
+            disabled={!selectedUserId && !name}
+            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Assign User
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+} function AddVolunteerDialog({ isOpen, onClose, onAdd, users }: any) {
+  const [email, setEmail] = useState("");
+  const [selectedUser, setSelectedUser] = useState("");
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+        <h3 className="text-lg font-semibold mb-4">Add Available User</h3>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Select Existing User</label>
+          <select
+            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            value={selectedUser}
+            onChange={(e) => {
+              setSelectedUser(e.target.value);
+              if (e.target.value) setEmail(""); // Clear manual email if user selected
+            }}
+          >
+            <option value="">-- Select a user --</option>
+            {users.map((u: any) => (
+              <option key={u.id} value={u.email}>{u.name || u.email}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-zinc-200"></div>
+          <span className="flex-shrink-0 mx-4 text-zinc-400 text-xs">OR</span>
+          <div className="flex-grow border-t border-zinc-200"></div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Enter Email Manually</label>
+          <input
+            type="email"
+            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="user@example.com"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (e.target.value) setSelectedUser(""); // Clear selection if typing
+            }}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 rounded-md hover:bg-zinc-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onAdd(selectedUser || email)}
+            disabled={!selectedUser && !email}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add User
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -346,7 +621,7 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
             >
               {!hasAnyShifts && (
                 <option value="" className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded font-medium text-indigo-600">
-                  General Position (No Role)
+                  Any Role (No Specific Role)
                 </option>
               )}
               {allRoles.map((role: any) => (
@@ -398,55 +673,12 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
 function AssignmentsList({ shifts, isOwner, scheduleId, planStatus }: any) {
   if (!isOwner) return null;
 
-  const hasAssignments = shifts.some((s: any) => s.assignments.length > 0);
   const hasAvailability = shifts.some((s: any) => s.availabilities?.length > 0);
 
-  if (!hasAssignments && !hasAvailability) return null;
+  if (!hasAvailability) return null;
 
   return (
-    <div className="mt-3 border-t border-zinc-50">
-      <div className="flex flex-wrap gap-2">
-        {shifts.flatMap((s: any) => s.assignments).map((assignment: any) => (
-          <div
-            key={assignment.id}
-            className="flex items-center gap-2 bg-zinc-50 px-2.5 py-1.5 rounded-md text-xs border border-zinc-100"
-          >
-            <span className="font-medium text-zinc-700">{assignment.name || assignment.email || assignment.user?.email}</span>
-            {assignment.shift?.role && (
-              <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-zinc-100 shadow-sm"
-                style={{ color: assignment.shift.role.color || '#666' }}
-              >
-                {assignment.shift.role.name}
-              </span>
-            )}
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
-              title={assignment.status}
-            />
-
-            {isOwner && assignment.status === 'PENDING' && planStatus !== "RECRUITMENT" && (
-              <button
-                onClick={() => confirmAssignmentAction(assignment.id, scheduleId)}
-                className="ml-1 text-indigo-600 hover:text-indigo-800 font-bold p-0.5 hover:bg-indigo-50 rounded"
-                title="Confirm"
-              >
-                ✓
-              </button>
-            )}
-            {isOwner && assignment.status === 'CONFIRMED' && planStatus !== "RECRUITMENT" && (
-              <button
-                onClick={() => unconfirmAssignmentAction(assignment.id, scheduleId)}
-                className="ml-1 text-amber-600 hover:text-amber-800 font-bold p-0.5 hover:bg-amber-50 rounded"
-                title="Unconfirm (Revert to Pending)"
-              >
-                ↺
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
+    <div className="border-t border-zinc-50">
       {isOwner && <AvailableVolunteersList shifts={shifts} scheduleId={scheduleId} planStatus={planStatus} />}
     </div>
   );
@@ -460,7 +692,7 @@ function AvailableVolunteersList({ shifts, scheduleId, planStatus }: any) {
     <div className="mt-3">
       <h4 className="text-xs font-semibold text-zinc-500 mb-2">Available Users:</h4>
       <div className="flex flex-wrap gap-2">
-        {shifts.flatMap((s: any) => s.availabilities || []).map((availability: any) => (
+        {shifts.flatMap((s: any) => (s.availabilities || []).map((a: any) => ({ ...a, shift: s }))).map((availability: any) => (
           <div
             key={availability.id}
             className="flex items-center gap-2 bg-indigo-50 px-2.5 py-1.5 rounded-md text-xs border border-indigo-100"
@@ -474,15 +706,20 @@ function AvailableVolunteersList({ shifts, scheduleId, planStatus }: any) {
                 {availability.shift.role.name}
               </span>
             )}
-            {planStatus !== "RECRUITMENT" && (
-              <button
-                onClick={() => assignVolunteerAction(availability.shiftId, availability.userId, scheduleId)}
-                className="ml-1 text-indigo-600 hover:text-indigo-800 font-bold p-0.5 hover:bg-indigo-100 rounded"
-                title="Assign"
-              >
-                +
-              </button>
-            )}
+            <button
+              onClick={async () => {
+                try {
+                  await assignVolunteerAction(availability.shiftId, availability.userId, scheduleId);
+                  toast.success("Volunteer assigned");
+                } catch (error) {
+                  toast.error("Failed to assign volunteer");
+                }
+              }}
+              className="ml-1 text-indigo-600 hover:text-indigo-800 font-bold p-0.5 hover:bg-indigo-100 rounded"
+              title="Assign"
+            >
+              +
+            </button>
             <button
               onClick={() => {
                 toast("Remove this user from availability?", {
@@ -495,7 +732,7 @@ function AvailableVolunteersList({ shifts, scheduleId, planStatus }: any) {
                   },
                   cancel: {
                     label: "Cancel",
-                    onClick: () => {}
+                    onClick: () => { }
                   }
                 });
               }}

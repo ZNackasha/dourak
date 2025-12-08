@@ -25,7 +25,7 @@ export function DeleteScheduleButton({ scheduleId }: { scheduleId: string }) {
       },
       cancel: {
         label: "Cancel",
-        onClick: () => {}
+        onClick: () => { }
       }
     });
   };

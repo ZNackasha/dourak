@@ -78,7 +78,7 @@ export async function toggleAvailabilityAction(
   }
 
   // Check existing availability
-  const existing = await db.availability.findUnique({
+  const existingAvailability = await db.availability.findUnique({
     where: {
       shiftId_userId: {
         shiftId: targetShiftId,
@@ -87,11 +87,30 @@ export async function toggleAvailabilityAction(
     },
   });
 
-  if (existing) {
-    // Remove availability
-    await db.availability.delete({
-      where: { id: existing.id },
-    });
+  // Check existing assignment
+  const existingAssignment = await db.assignment.findUnique({
+    where: {
+      shiftId_userId: {
+        shiftId: targetShiftId,
+        userId: userId,
+      },
+    },
+  });
+
+  if (existingAvailability || existingAssignment) {
+    // Remove availability if exists
+    if (existingAvailability) {
+      await db.availability.delete({
+        where: { id: existingAvailability.id },
+      });
+    }
+
+    // Remove assignment if exists
+    if (existingAssignment) {
+      await db.assignment.delete({
+        where: { id: existingAssignment.id },
+      });
+    }
   } else {
     // Verify role if shift has one
     if (shiftId) {
@@ -141,10 +160,22 @@ export async function confirmAssignmentAction(
   const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
   if (!isAdmin) throw new Error("Unauthorized");
 
-  await db.assignment.update({
+  const assignment = await db.assignment.findUnique({
     where: { id: assignmentId },
-    data: { status: "CONFIRMED" },
   });
+  if (!assignment) throw new Error("Assignment not found");
+
+  if (assignment.userId) {
+    await db.assignment.update({
+      where: { id: assignmentId },
+      data: { status: "CONFIRMED" },
+    });
+  } else {
+    await db.assignment.update({
+      where: { id: assignmentId },
+      data: { status: "CONFIRMED" },
+    });
+  }
 
   revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
@@ -160,9 +191,31 @@ export async function unconfirmAssignmentAction(
   const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
   if (!isAdmin) throw new Error("Unauthorized");
 
-  await db.assignment.update({
+  const assignment = await db.assignment.findUnique({
     where: { id: assignmentId },
-    data: { status: "PENDING" },
+  });
+
+  if (!assignment) throw new Error("Assignment not found");
+
+  // If user is assigned, move back to availability
+  if (assignment.userId) {
+    await db.availability.upsert({
+      where: {
+        shiftId_userId: {
+          shiftId: assignment.shiftId,
+          userId: assignment.userId,
+        },
+      },
+      create: {
+        shiftId: assignment.shiftId,
+        userId: assignment.userId,
+      },
+      update: {},
+    });
+  }
+
+  await db.assignment.delete({
+    where: { id: assignmentId },
   });
 
   revalidatePath(`/schedules/${scheduleId}`, "layout");
@@ -183,12 +236,12 @@ export async function assignVolunteerAction(
   await db.assignment.upsert({
     where: {
       shiftId_userId: {
-        shiftId,
+        shiftId: shiftId,
         userId,
       },
     },
     create: {
-      shiftId,
+      shiftId: shiftId,
       userId,
       status: "CONFIRMED",
     },
@@ -197,7 +250,7 @@ export async function assignVolunteerAction(
     },
   });
 
-  // Remove availability
+  // Remove availability from original shift
   try {
     await db.availability.delete({
       where: {
@@ -317,6 +370,37 @@ export async function volunteerForMultipleEventsAction(
   revalidatePath(`/schedules/${scheduleId}`, "layout");
 }
 
+export async function adminAddAvailabilityAction(
+  shiftId: string,
+  scheduleId: string,
+  email: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const user = await db.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) throw new Error("User not found with this email");
+
+  try {
+    await db.availability.create({
+      data: {
+        shiftId,
+        userId: user.id,
+      },
+    });
+  } catch (e) {
+    // Ignore if already exists
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
 export async function adminRemoveAvailabilityAction(
   shiftId: string,
   userId: string,
@@ -386,5 +470,129 @@ export async function cancelMultipleVolunteersAction(
   }
 
   revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+export async function adminAddEventAvailabilityAction(
+  eventId: string,
+  scheduleId: string,
+  email: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const user = await db.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) throw new Error("User not found with this email");
+
+  // Find or create generic Shift for this event
+  let shift = await db.shift.findFirst({
+    where: {
+      calendarEventId: eventId,
+      roleId: null,
+    },
+  });
+
+  if (!shift) {
+    shift = await db.shift.create({
+      data: {
+        calendarEventId: eventId,
+        roleId: null,
+      },
+    });
+  }
+
+  try {
+    await db.availability.create({
+      data: {
+        shiftId: shift.id,
+        userId: user.id,
+      },
+    });
+  } catch (e) {
+    // Ignore if already exists
+  }
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+async function ensureCorrectShiftForUser(
+  shiftId: string,
+  userId: string,
+  scheduleId: string
+) {
+  const shift = await db.shift.findUnique({
+    where: { id: shiftId },
+    include: { calendarEvent: true },
+  });
+  if (!shift) throw new Error("Shift not found");
+
+  // If shift already has a role, we are good.
+  if (shift.roleId) return shiftId;
+
+  // Shift is "Any Role". Check user's roles.
+  const userRoles = await db.userRole.findMany({
+    where: {
+      userId,
+      role: { scheduleId },
+    },
+    include: { role: true },
+  });
+
+  if (userRoles.length === 0) return shiftId; // User has no specific roles, keep in Any Role.
+
+  // User has roles. Try to find a shift for the first role.
+  const targetRoleId = userRoles[0].roleId;
+
+  // Check if shift exists for this role in this event
+  const existingShift = await db.shift.findFirst({
+    where: {
+      calendarEventId: shift.calendarEventId,
+      roleId: targetRoleId,
+    },
+  });
+
+  if (existingShift) {
+    return existingShift.id;
+  }
+
+  // Create new shift for this role
+  const newShift = await db.shift.create({
+    data: {
+      calendarEventId: shift.calendarEventId,
+      roleId: targetRoleId,
+      needed: 1,
+    },
+  });
+
+  return newShift.id;
+}
+
+async function cleanupEmptyAnyRoleShift(shiftId: string) {
+  const shift = await db.shift.findUnique({
+    where: { id: shiftId },
+    include: { assignments: true, availabilities: true },
+  });
+  if (
+    shift &&
+    !shift.roleId &&
+    shift.assignments.length === 0 &&
+    shift.availabilities.length === 0
+  ) {
+    // Check if there are other shifts for this event
+    const otherShifts = await db.shift.count({
+      where: {
+        calendarEventId: shift.calendarEventId,
+        id: { not: shiftId },
+      },
+    });
+    if (otherShifts > 0) {
+      await db.shift.delete({ where: { id: shiftId } });
+    }
+  }
 }
 
