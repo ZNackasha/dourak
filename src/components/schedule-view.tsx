@@ -18,6 +18,131 @@ interface ScheduleViewProps {
   scheduleUsers?: any[];
 }
 
+function DateGroup({
+  date,
+  events,
+  schedule,
+  isOwner,
+  currentUserId,
+  userRoleIds,
+  allRoles,
+  planStatus,
+  scheduleUsers,
+  recurringInstances,
+  onVolunteerAll,
+  volunteeringDate
+}: {
+  date: string;
+  events: any[];
+  schedule: any;
+  isOwner: boolean;
+  currentUserId: string;
+  userRoleIds: string[];
+  allRoles: any[];
+  planStatus: string;
+  scheduleUsers: any[];
+  recurringInstances: Map<string, any[]>;
+  onVolunteerAll: (date: string, events: any[], action: "volunteer" | "cancel") => void;
+  volunteeringDate: string | null;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const eligibleEvents = events.filter((event: any) => {
+    if (event.shifts.length === 0) return true;
+    return event.shifts.some((shift: any) => {
+      const rId = shift.roleId || shift.role?.id;
+      if (!rId) return true;
+      return userRoleIds.includes(rId);
+    });
+  });
+
+  const isFullyBooked = eligibleEvents.length > 0 && eligibleEvents.every((event: any) =>
+    event.shifts.some((shift: any) =>
+      shift.assignments.some((a: any) => a.userId === currentUserId) ||
+      shift.availabilities?.some((a: any) => a.userId === currentUserId)
+    )
+  );
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="flex items-center justify-between sticky top-0 bg-zinc-50/95 backdrop-blur-sm z-10 py-3 border-b border-zinc-200/50 group"
+      >
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-2 hover:text-zinc-600 transition-colors focus:outline-none"
+        >
+          <svg
+            className={`w-5 h-5 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <h2 className="text-lg font-semibold text-zinc-900">{date}</h2>
+          <span className="text-sm text-zinc-400 font-normal ml-2">
+            ({events.length} event{events.length !== 1 ? 's' : ''})
+          </span>
+        </button>
+
+        {!isOwner && currentUserId && eligibleEvents.length > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onVolunteerAll(date, events, isFullyBooked ? "cancel" : "volunteer");
+            }}
+            disabled={volunteeringDate === date}
+            className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors border ${isFullyBooked
+              ? "text-red-600 border-red-200 hover:bg-red-50"
+              : "text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              }`}
+          >
+            {volunteeringDate === date ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Updating...
+              </span>
+            ) : isFullyBooked ? (
+              "Not available"
+            ) : (
+              "I'm available all day"
+            )}
+          </button>
+        )}
+      </div>
+
+      {isExpanded && (
+        <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+          {events.map((event: any) => {
+            const relatedEvents = (isOwner && event.recurringEventId)
+              ? recurringInstances.get(event.recurringEventId)
+              : undefined;
+
+            return (
+              <EventCard
+                key={event.id}
+                event={event}
+                scheduleId={schedule.id}
+                isOwner={isOwner}
+                currentUserId={currentUserId}
+                userRoleIds={userRoleIds}
+                allRoles={allRoles}
+                planStatus={planStatus}
+                scheduleUsers={scheduleUsers}
+                relatedEvents={relatedEvents}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ScheduleView({
   schedule,
   plan,
@@ -242,43 +367,54 @@ export function ScheduleView({
   const filteredEvents = getVisibleEvents();
 
   // Group events by date
-  const eventsByDate = filteredEvents.reduce((acc: any, event: any) => {
+  const eventsByDate = filteredEvents.reduce((groups: { date: string; events: any[] }[], event: any) => {
     const dateKey = new Date(event.start).toLocaleDateString(undefined, {
       weekday: "long",
       month: "short",
       day: "numeric",
     });
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(event);
-    return acc;
-  }, {} as Record<string, any[]>);
+
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.date === dateKey) {
+      lastGroup.events.push(event);
+    } else {
+      groups.push({ date: dateKey, events: [event] });
+    }
+    return groups;
+  }, []);
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <div className="mb-10 flex flex-col gap-4">
+      <div className="mb-10 flex flex-col gap-6">
         {!currentUserId && (
-          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
-            <svg className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="bg-indigo-50/80 border border-indigo-100 rounded-2xl p-5 flex items-start gap-4 shadow-sm">
+            <div className="p-2 bg-indigo-100 rounded-full text-indigo-600">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
             <div>
-              <h3 className="text-sm font-semibold text-indigo-900">Guest View</h3>
-              <p className="text-sm text-indigo-700 mt-1">
-                You are viewing this schedule as a guest. <a href="/api/auth/signin" className="underline hover:text-indigo-900 font-medium">Sign in</a> to see events that match your roles and to volunteer.
+              <h3 className="text-base font-semibold text-indigo-900">Guest View</h3>
+              <p className="text-sm text-indigo-700 mt-1 leading-relaxed">
+                You are viewing this schedule as a guest. <a href="/api/auth/signin" className="underline hover:text-indigo-900 font-medium decoration-indigo-300 underline-offset-2">Sign in</a> to see events that match your roles and to volunteer.
               </p>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
-              <a href={`/schedules/${schedule.id}`} className="hover:underline hover:text-zinc-700 transition-colors">
-                {schedule.name}
-              </a> <span className="text-zinc-400 font-normal">/ {plan.name}</span>
-            </h1>
-            <div className="flex items-center gap-2 mt-2 text-zinc-500">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
+          <div className="space-y-2">
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
+                <a href={`/schedules/${schedule.id}`} className="hover:text-zinc-600 transition-colors">
+                  {schedule.name}
+                </a>
+              </h1>
+              <span className="text-zinc-300 text-2xl font-light">/</span>
+              <span className="text-2xl font-medium text-zinc-500">{plan.name}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 bg-zinc-50 w-fit px-3 py-1 rounded-full border border-zinc-100">
+              <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>
@@ -287,73 +423,74 @@ export function ScheduleView({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             {isOwner && (
               <>
-                <select
-                  value={plan.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  className="appearance-none cursor-pointer px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-auto pr-8"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: `right 0.5rem center`,
-                    backgroundRepeat: `no-repeat`,
-                    backgroundSize: `1.5em 1.5em`,
-                    paddingRight: `2.5rem`
-                  }}
-                >
-                  <option value="DRAFT">Draft (Hidden)</option>
-                  <option value="RECRUITMENT">Recruitment</option>
-                  <option value="SCHEDULED">Scheduled ( Locked )</option>
-                  <option value="ARCHIVED">Archived (Hidden)</option>
-                </select>
-
-                <div className="relative group/share">
-                  <button
-                    onClick={handleShare}
-                    disabled={plan.status === "DRAFT" || plan.status === "ARCHIVED"}
-                    className={`inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 shadow-sm flex-1 sm:flex-none transition-colors ${plan.status === "DRAFT" || plan.status === "ARCHIVED"
-                      ? "opacity-50 cursor-not-allowed bg-zinc-50"
-                      : "hover:bg-zinc-50 hover:border-zinc-300"
-                      }`}
+                <div className="flex items-center gap-2 bg-zinc-50 p-1 rounded-xl border border-zinc-200">
+                  <select
+                    value={plan.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="appearance-none cursor-pointer px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm focus:ring-indigo-500 focus:border-indigo-500 pr-8"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: `right 0.5rem center`,
+                      backgroundRepeat: `no-repeat`,
+                      backgroundSize: `1.2em 1.2em`,
+                      paddingRight: `2rem`
+                    }}
                   >
-                    <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                  </button>
-                  {(plan.status === "DRAFT" || plan.status === "ARCHIVED") && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-zinc-800 text-white text-xs rounded shadow-lg hidden group-hover/share:block text-center z-50 pointer-events-none">
-                      Users can only see plans that are Recruitment or Scheduled.
-                    </div>
+                    <option value="DRAFT">Draft</option>
+                    <option value="RECRUITMENT">Recruitment</option>
+                    <option value="SCHEDULED">Scheduled</option>
+                    <option value="ARCHIVED">Archived</option>
+                  </select>
+
+                  <div className="h-4 w-px bg-zinc-200 mx-1"></div>
+
+                  <div className="relative group/share">
+                    <button
+                      onClick={handleShare}
+                      disabled={plan.status === "DRAFT" || plan.status === "ARCHIVED"}
+                      className={`p-1.5 rounded-lg transition-colors ${plan.status === "DRAFT" || plan.status === "ARCHIVED"
+                        ? "text-zinc-300 cursor-not-allowed"
+                        : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50"
+                        }`}
+                      title="Share Plan"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {plan.status === "SCHEDULED" && (
+                    <button
+                      onClick={handleSendNotifications}
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 transition-colors"
+                      title="Send Notifications"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </button>
                   )}
-                </div>
 
-                {plan.status === "SCHEDULED" && (
                   <button
-                    onClick={handleSendNotifications}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm flex-1 sm:flex-none"
-                    title="Send email notifications to assigned users"
+                    onClick={handleDeletePlan}
+                    className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete Plan"
                   >
-                    <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
-                )}
-
-                <button
-                  onClick={handleDeletePlan}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm flex-1 sm:flex-none"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                </div>
 
                 <button
                   onClick={() => setIsImpersonating(!isImpersonating)}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors shadow-sm flex-1 sm:flex-none ${isImpersonating
-                    ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                    : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-sm font-medium transition-all shadow-sm ${isImpersonating
+                    ? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700"
+                    : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300"
                     }`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -368,13 +505,17 @@ export function ScheduleView({
         </div>
 
         {isOwner && isImpersonating && (
-          <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .884-.56 1.6-1.357 1.994M16 6c0 .884.56 1.6 1.357 1.994" />
-              </svg>
-              <h3 className="text-sm font-semibold text-indigo-900">Impersonating Roles</h3>
-              <span className="text-xs text-indigo-600 ml-auto">Select roles to see what they see</span>
+          <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .884-.56 1.6-1.357 1.994M16 6c0 .884.56 1.6 1.357 1.994" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-indigo-900">Impersonating Roles</h3>
+                <p className="text-xs text-indigo-600">Select roles to see what they see</p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {allRoles.map((role) => {
@@ -384,8 +525,8 @@ export function ScheduleView({
                     key={role.id}
                     onClick={() => toggleImpersonatedRole(role.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${isSelected
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                      : "bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600"
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm ring-2 ring-indigo-200 ring-offset-1"
+                      : "bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600 hover:shadow-sm"
                       }`}
                   >
                     {role.name}
@@ -402,27 +543,49 @@ export function ScheduleView({
       </div>
 
       {viewMode === "cards" ? (
-        <div className="space-y-4">
-          {filteredEvents.map((event: any) => {
-            const relatedEvents = (activeIsOwner && event.recurringEventId)
-              ? recurringInstances.get(event.recurringEventId)
-              : undefined;
+        <div className="space-y-8">
+          {activeIsOwner ? (
+            <div className="space-y-4">
+              {filteredEvents.map((event: any) => {
+                const relatedEvents = (activeIsOwner && event.recurringEventId)
+                  ? recurringInstances.get(event.recurringEventId)
+                  : undefined;
 
-            return (
-              <EventCard
-                key={event.id}
-                event={event}
-                scheduleId={schedule.id}
+                return (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    scheduleId={schedule.id}
+                    isOwner={activeIsOwner}
+                    currentUserId={currentUserId}
+                    userRoleIds={activeUserRoleIds}
+                    allRoles={allRoles}
+                    planStatus={plan.status}
+                    scheduleUsers={scheduleUsers}
+                    relatedEvents={relatedEvents}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            eventsByDate.map(({ date, events: dateEvents }) => (
+              <DateGroup
+                key={date}
+                date={date}
+                events={dateEvents}
+                schedule={schedule}
                 isOwner={activeIsOwner}
                 currentUserId={currentUserId}
                 userRoleIds={activeUserRoleIds}
                 allRoles={allRoles}
                 planStatus={plan.status}
                 scheduleUsers={scheduleUsers}
-                relatedEvents={relatedEvents}
+                recurringInstances={recurringInstances}
+                onVolunteerAll={handleVolunteerAll}
+                volunteeringDate={volunteeringDate}
               />
-            );
-          })}
+            ))
+          )}
           {filteredEvents.length === 0 && (
             <div className="text-center py-16 bg-white rounded-xl border border-dashed border-zinc-200">
               <p className="text-zinc-500">No events found in this schedule.</p>
