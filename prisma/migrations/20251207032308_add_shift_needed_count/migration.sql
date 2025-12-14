@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "Shift" ADD COLUMN     "needed" INTEGER NOT NULL DEFAULT 1;
