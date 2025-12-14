@@ -6,6 +6,19 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { db } from "@/lib/prisma";
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+if (!googleClientId || !googleClientSecret) {
+  console.error(
+    "Missing Google OAuth Credentials. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+  );
+}
+
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error("Missing NEXTAUTH_SECRET. This is required in production.");
+}
+
 // @ts-ignore
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -16,8 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: googleClientId!,
+      clientSecret: googleClientSecret!,
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
