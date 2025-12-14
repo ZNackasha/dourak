@@ -15,9 +15,6 @@ if (!datasourceUrl) {
 }
 
 process.env.DATABASE_URL = datasourceUrl;
-if (!process.env.PRISMA_CLIENT_ENGINE_TYPE) {
-  process.env.PRISMA_CLIENT_ENGINE_TYPE = "binary";
-}
 
 const globalForPrisma = globalThis as unknown as {
   prisma_v2?: PrismaClient;

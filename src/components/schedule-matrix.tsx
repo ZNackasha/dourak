@@ -79,50 +79,64 @@ export function ScheduleMatrix({ events, allRoles }: ScheduleMatrixProps) {
                   <div className="text-sm leading-tight truncate">{event.title}</div>
                 </td>
                 <td className="px-3 py-1.5 md:px-4 md:py-3 align-top block w-full md:w-auto md:table-cell border-t border-indigo-50/50 md:border-t-0">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-1 md:gap-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {sortedShifts.map((shift: any) => {
-                      const role = shift.role || { name: "General", color: "#9ca3af" };
-                      const hasAssignments = shift.assignments.length > 0;
+                      const roleName = shift.name || shift.role?.name || "Any Role";
+                      const roleColor = shift.role?.color || "#9ca3af";
 
-                      return (
-                        <div key={shift.id} className="flex items-start gap-2 min-w-[200px]">
-                          <div className="flex items-center gap-2 mt-0.5 w-32 flex-shrink-0">
-                            <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-xs font-medium text-zinc-700 ring-1 ring-zinc-200 bg-white w-full">
-                              <div
-                                className="w-2 h-2 rounded-full ring-1 ring-black/5 flex-shrink-0"
-                                style={{ backgroundColor: role.color || '#ccc' }}
-                              />
-                              <span className="truncate" title={role.name}>
-                                {role.name}
-                              </span>
-                            </div>
+                      if (shift.assignments.length === 0) {
+                        return (
+                          <div
+                            key={shift.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs border border-zinc-200 bg-zinc-50/50 text-zinc-500 hover:bg-zinc-100 transition-colors cursor-default"
+                            title={`${roleName}: Unassigned`}
+                          >
+                            <div
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: roleColor }}
+                            />
+                            <span className="font-medium flex-shrink-0">{roleName}:</span>
+                            <span className="italic opacity-70">Unassigned</span>
+                          </div>
+                        );
+                      }
+
+                      return shift.assignments.map((assignment: any) => (
+                        <div key={assignment.id} className="relative group">
+                          {/* Base Card */}
+                          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs border border-zinc-200 bg-white text-zinc-700 shadow-sm">
+                            <div
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: roleColor }}
+                            />
+                            <span className="font-medium flex-shrink-0">{roleName}:</span>
+                            <span className="truncate">
+                              {assignment.name || assignment.user?.name || assignment.email}
+                            </span>
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ml-auto flex-shrink-0 ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
+                            />
                           </div>
 
-                          <div className="flex-1 flex flex-col gap-1">
-                            {hasAssignments ? (
-                              shift.assignments.map((assignment: any) => (
-                                <div
-                                  key={assignment.id}
-                                  className="flex items-center gap-2 bg-zinc-50 px-2 py-1 rounded-md text-xs border border-zinc-100 w-fit"
-                                >
-                                  <span className="font-medium text-zinc-700 whitespace-nowrap">
-                                    {assignment.name || assignment.user?.name || assignment.email}
-                                  </span>
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
-                                    title={assignment.status === 'CONFIRMED' ? 'Confirmed' : 'Pending'}
-                                  />
-                                </div>
-                              ))
-                            ) : (
-                              <span className="text-xs text-zinc-300 italic px-1 py-0.5">Unassigned</span>
-                            )}
+                          {/* Hover Card (Expanded) */}
+                          <div className="hidden group-hover:flex absolute top-0 left-0 min-w-full w-auto items-center gap-2 px-2 py-1.5 rounded-md text-xs border border-zinc-300 bg-white text-zinc-700 shadow-md z-50 whitespace-nowrap">
+                            <div
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: roleColor }}
+                            />
+                            <span className="font-medium flex-shrink-0">{roleName}:</span>
+                            <span>
+                              {assignment.name || assignment.user?.name || assignment.email}
+                            </span>
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ml-auto flex-shrink-0 ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
+                            />
                           </div>
                         </div>
-                      );
+                      ));
                     })}
                     {sortedShifts.length === 0 && (
-                      <span className="text-zinc-400 italic text-xs">No positions scheduled</span>
+                      <span className="text-zinc-400 italic text-xs col-span-full">No positions scheduled</span>
                     )}
                   </div>
                 </td>

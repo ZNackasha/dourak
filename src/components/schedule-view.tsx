@@ -165,6 +165,19 @@ export function ScheduleView({
     }
   };
 
+  // Group recurring events for the owner to pass to EventCard
+  const recurringInstances = new Map<string, any[]>();
+  if (isOwner) {
+    events.forEach((event) => {
+      if (event.recurringEventId) {
+        if (!recurringInstances.has(event.recurringEventId)) {
+          recurringInstances.set(event.recurringEventId, []);
+        }
+        recurringInstances.get(event.recurringEventId)?.push(event);
+      }
+    });
+  }
+
   // Filter events based on view mode
   const getVisibleEvents = () => {
     let visibleEvents = events;
@@ -181,29 +194,46 @@ export function ScheduleView({
         return true;
       });
     }
+    // ... existing logic ...
 
     // Filter out events that are not visible to the current user (or impersonated role)
     // This matches the logic in EventCard
     if (!activeIsOwner) {
-      visibleEvents = visibleEvents.filter((event) => {
-        const shifts = event.shifts;
-        const hasRoles = shifts.some((s: any) => s.roleId);
+      if (viewMode === "matrix") {
+        // In matrix view (Scheduled), users only see their own assignments
+        visibleEvents = visibleEvents
+          .map((event) => {
+            // Find shifts where the current user is assigned
+            const userShifts = event.shifts.filter((s: any) =>
+              s.assignments.some((a: any) => a.userId === currentUserId)
+            );
 
-        if (hasRoles) {
-          const hasMatchingRole = shifts.some((s: any) => {
-            const rId = s.roleId || s.role?.id;
-            return rId && activeUserRoleIds.includes(rId);
-          });
-          const isAssigned = shifts.some((s: any) =>
-            s.assignments.some((a: any) => a.userId === currentUserId)
-          );
+            if (userShifts.length === 0) return null;
 
-          if (!hasMatchingRole && !isAssigned) {
-            return false;
+            return { ...event, shifts: userShifts };
+          })
+          .filter((e): e is typeof events[0] => e !== null);
+      } else {
+        visibleEvents = visibleEvents.filter((event) => {
+          const shifts = event.shifts;
+          const hasRoles = shifts.some((s: any) => s.roleId);
+
+          if (hasRoles) {
+            const hasMatchingRole = shifts.some((s: any) => {
+              const rId = s.roleId || s.role?.id;
+              return rId && activeUserRoleIds.includes(rId);
+            });
+            const isAssigned = shifts.some((s: any) =>
+              s.assignments.some((a: any) => a.userId === currentUserId)
+            );
+
+            if (!hasMatchingRole && !isAssigned) {
+              return false;
+            }
           }
-        }
-        return true;
-      });
+          return true;
+        });
+      }
     }
 
     return visibleEvents;
@@ -372,78 +402,28 @@ export function ScheduleView({
       </div>
 
       {viewMode === "cards" ? (
-        <div className="space-y-10">
-          {Object.entries(eventsByDate).map(([date, events]: any) => {
-            let eligibleEventsCount = 0;
-            let volunteeredEventsCount = 0;
-
-            events.forEach((event: any) => {
-              const matchingShifts = event.shifts.filter((shift: any) => {
-                const rId = shift.roleId || shift.role?.id;
-                return (rId && activeUserRoleIds.includes(rId)) || !shift.roleId;
-              });
-
-              const isGenericAllowed = event.shifts.length === 0;
-
-              if (matchingShifts.length > 0 || isGenericAllowed) {
-                eligibleEventsCount++;
-
-                const isVolunteered = matchingShifts.some((shift: any) =>
-                  shift.assignments.some((a: any) => a.userId === currentUserId) ||
-                  shift.availabilities?.some((a: any) => a.userId === currentUserId)
-                );
-
-                if (isVolunteered) {
-                  volunteeredEventsCount++;
-                }
-              }
-            });
-
-            const isVolunteeredForAll = eligibleEventsCount > 0 && eligibleEventsCount === volunteeredEventsCount;
-            const canVolunteerForAny = eligibleEventsCount > 0;
+        <div className="space-y-4">
+          {filteredEvents.map((event: any) => {
+            const relatedEvents = (activeIsOwner && event.recurringEventId)
+              ? recurringInstances.get(event.recurringEventId)
+              : undefined;
 
             return (
-              <div key={date} className="relative">
-                <div className="sticky top-0 z-10 bg-zinc-50/95 backdrop-blur-sm py-3 mb-4 border-b border-zinc-200/50 flex justify-between items-center">
-                  <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                    {date}
-                  </h2>
-                  {canVolunteerForAny && !activeIsOwner && currentUserId && (
-                    <button
-                      onClick={() => handleVolunteerAll(date, events, isVolunteeredForAll ? "cancel" : "volunteer")}
-                      disabled={volunteeringDate === date}
-                      className={`text-xs font-medium px-3 py-1 rounded-full transition-colors disabled:opacity-50 ${isVolunteeredForAll
-                        ? "text-red-600 hover:text-red-700 bg-red-50"
-                        : "text-indigo-600 hover:text-indigo-700 bg-indigo-50"
-                        }`}
-                    >
-                      {volunteeringDate === date
-                        ? (isVolunteeredForAll ? "Cancelling..." : "Signing up...")
-                        : (isVolunteeredForAll ? "Cancel All" : "Available for All")}
-                    </button>
-
-                  )}
-                </div>
-                <div className="grid gap-4">
-                  {events.map((event: any) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      scheduleId={schedule.id}
-                      isOwner={activeIsOwner}
-                      currentUserId={currentUserId}
-                      userRoleIds={activeUserRoleIds}
-                      allRoles={allRoles}
-                      planStatus={plan.status}
-                      scheduleUsers={scheduleUsers}
-                    />
-                  ))}
-                </div>
-              </div>
+              <EventCard
+                key={event.id}
+                event={event}
+                scheduleId={schedule.id}
+                isOwner={activeIsOwner}
+                currentUserId={currentUserId}
+                userRoleIds={activeUserRoleIds}
+                allRoles={allRoles}
+                planStatus={plan.status}
+                scheduleUsers={scheduleUsers}
+                relatedEvents={relatedEvents}
+              />
             );
           })}
-          {Object.keys(eventsByDate).length === 0 && (
+          {filteredEvents.length === 0 && (
             <div className="text-center py-16 bg-white rounded-xl border border-dashed border-zinc-200">
               <p className="text-zinc-500">No events found in this schedule.</p>
             </div>

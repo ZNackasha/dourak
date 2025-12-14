@@ -33,6 +33,10 @@ const getSeriesColor = (id: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+import { format } from "date-fns";
+
+// ... existing imports ...
+
 export function EventCard({
   event,
   scheduleId,
@@ -41,7 +45,8 @@ export function EventCard({
   userRoleIds = [],
   allRoles = [],
   planStatus,
-  scheduleUsers = []
+  scheduleUsers = [],
+  relatedEvents = []
 }: {
   event: any,
   scheduleId: string,
@@ -50,7 +55,8 @@ export function EventCard({
   userRoleIds?: string[],
   allRoles?: any[],
   planStatus?: string,
-  scheduleUsers?: any[]
+  scheduleUsers?: any[],
+  relatedEvents?: any[]
 }) {
   const shifts = event.shifts;
   const hasRoles = shifts.some((s: any) => s.roleId);
@@ -88,6 +94,9 @@ export function EventCard({
     }
   };
 
+  const dateStr = format(new Date(event.start), "EEE, MMM d");
+  const timeStr = format(new Date(event.start), "h:mm a");
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-all duration-200 group flex">
       <div className={`w-1.5 flex-shrink-0 rounded-l-xl ${seriesColor}`} title={event.recurringEventId ? "Repeating Event Series" : "Single Event"} />
@@ -95,9 +104,29 @@ export function EventCard({
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 sm:gap-3 mb-0.5 sm:mb-1">
-              <span className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
-                {new Date(event.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-              </span>
+              <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                <span>{dateStr}</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                <span>{timeStr}</span>
+                {relatedEvents && relatedEvents.length > 1 && (
+                  <div className="relative group/times ml-1">
+                    <span className="bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded text-[10px] cursor-help">
+                      +{relatedEvents.length - 1} more
+                    </span>
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-zinc-200 rounded-lg shadow-lg p-2 hidden group-hover/times:block z-50 max-h-64 overflow-y-auto">
+                      <div className="text-[10px] font-bold text-zinc-400 mb-1 uppercase tracking-wider">All Occurrences</div>
+                      <div className="space-y-1">
+                        {relatedEvents.map((e: any) => (
+                          <div key={e.id} className="text-xs text-zinc-600 flex justify-between">
+                            <span>{format(new Date(e.start), "MMM d")}</span>
+                            <span>{format(new Date(e.start), "h:mm a")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="h-px flex-1 bg-zinc-100 sm:hidden"></div>
             </div>
             <h3 className="text-base sm:text-lg font-semibold text-zinc-900 leading-tight flex items-center gap-2">
@@ -254,12 +283,12 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
         role="button"
         onClick={!isOwner ? handleToggle : undefined}
         className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isConfirmed
-            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
-            : isAssigned
-              ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
-              : isAvailable
-                ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
-                : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+          : isAssigned
+            ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+            : isAvailable
+              ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
+              : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
           } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer ? "cursor-pointer" : "cursor-default"}`}
         title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
       >
