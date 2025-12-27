@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate resolve --rolled-back 20251130165233_init && prisma migrate deploy && prisma generate && next build",
+    "build": "prisma migrate resolve --applied 20251214163505_init && prisma migrate deploy && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
