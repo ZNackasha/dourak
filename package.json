@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && prisma generate && next build",
+    "build": "prisma migrate resolve --rolled-back 20251130165233_init && prisma migrate deploy && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
@@ -18,7 +18,7 @@
     "date-fns": "^4.1.0",
     "next": "^16.0.7",
     "next-auth": "^5.0.0-beta.30",
-    "nodemailer": "^7.0.11",
+    "nodemailer": "^6.10.1",
     "pg": "^8.12.0",
     "prisma": "^7.0.1",
     "qrcode.react": "^4.2.0",
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/nodemailer": "^7.0.4",
+    "@types/nodemailer": "^6.4.16",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
@@ -42,4 +42,3 @@
     "vitest": "^4.0.14"
   }
 }
-
