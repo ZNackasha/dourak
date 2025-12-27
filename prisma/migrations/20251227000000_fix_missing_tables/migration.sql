@@ -9,6 +9,22 @@ EXCEPTION
 END $$;
 
 -- CreateTable
+CREATE TABLE IF NOT EXISTS "User" (
+    "id" TEXT NOT NULL,
+    "name" TEXT,
+    "email" TEXT,
+    "emailVerified" TIMESTAMP(3),
+    "image" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
+
+-- CreateTable
 CREATE TABLE IF NOT EXISTS "UserRole" (
     "userId" TEXT NOT NULL,
     "roleId" TEXT NOT NULL,
