@@ -1,6 +1,13 @@
 -- Drop conflicting type if it exists (from failed migration)
 DROP TYPE IF EXISTS "UserRole" CASCADE;
 
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "ScheduleStatus" AS ENUM ('DRAFT', 'RECRUITMENT', 'SCHEDULED', 'ARCHIVED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "UserRole" (
     "userId" TEXT NOT NULL,
