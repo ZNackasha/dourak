@@ -1,5 +1,5 @@
 -- Drop conflicting type if it exists (from failed migration)
-DROP TYPE IF EXISTS "UserRole";
+DROP TYPE IF EXISTS "UserRole" CASCADE;
 
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "UserRole" (
