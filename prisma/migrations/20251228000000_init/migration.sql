@@ -1,8 +1,19 @@
 -- Reset Database
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
--- GRANT ALL ON SCHEMA public TO postgres;
--- GRANT ALL ON SCHEMA public TO public;
+-- Safely drop all tables and types without deleting _prisma_migrations
+
+DO $$ DECLARE
+    r RECORD;
+BEGIN
+    -- Drop all tables except _prisma_migrations
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != '_prisma_migrations') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS "public"."' || r.tablename || '" CASCADE';
+    END LOOP;
+
+    -- Drop all enums
+    FOR r IN (SELECT typname FROM pg_type JOIN pg_namespace ON pg_namespace.oid = pg_type.typnamespace WHERE pg_namespace.nspname = 'public' AND pg_type.typtype = 'e') LOOP
+        EXECUTE 'DROP TYPE IF EXISTS "public"."' || r.typname || '" CASCADE';
+    END LOOP;
+END $$;
 
 -- CreateEnum
 CREATE TYPE "ScheduleStatus" AS ENUM ('DRAFT', 'RECRUITMENT', 'SCHEDULED', 'ARCHIVED');
