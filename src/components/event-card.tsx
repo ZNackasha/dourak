@@ -102,7 +102,7 @@ export function EventCard({
       <div className={`w-1.5 flex-shrink-0 rounded-l-xl ${seriesColor}`} title={event.recurringEventId ? "Repeating Event Series" : "Single Event"} />
       <div className="p-2 sm:p-3 flex-1 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-3">
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-fit">
             <div className="flex items-center gap-2 sm:gap-3 mb-0.5 sm:mb-1">
               <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
                 <span>{dateStr}</span>
