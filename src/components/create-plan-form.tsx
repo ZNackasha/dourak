@@ -2,129 +2,111 @@
 
 import { createPlanAction } from "@/app/actions/schedule";
 import { useFormStatus } from "react-dom";
-import { useState, useEffect, useActionState } from "react";
+import { useEffect, useActionState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function SubmitButton() {
-	const { pending } = useFormStatus();
+  const { pending } = useFormStatus();
 
-	return (
-		<button
-			type="submit"
-			disabled={pending}
-			className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-		>
-			{pending ? "Creating..." : "Create Plan"}
-		</button>
-	);
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {pending ? "Creating..." : "Create Plan"}
+    </Button>
+  );
 }
 
 export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
-	const router = useRouter();
-	const [state, formAction] = useActionState(createPlanAction, null);
+  const router = useRouter();
+  const [state, formAction] = useActionState(createPlanAction, null);
 
-	useEffect(() => {
-		console.log("Form state updated:", state);
-		if (state?.success && state.planId) {
-			toast.success(state.message);
-			router.push(`/schedules/${scheduleId}/plans/${state.planId}`);
-			return;
-		}
+  useEffect(() => {
+    if (state?.success && state.planId) {
+      toast.success(state.message);
+      router.push(`/schedules/${scheduleId}/plans/${state.planId}`);
+      return;
+    }
 
-		if (state?.message) {
-			if (state.error) {
-				toast.error(state.message, {
-					description: state.error,
-					duration: 5000,
-				});
-			} else {
-				// Only show success toast here if it's not the redirect case (though redirect case is handled above)
-				// But keep it for other messages if any
-				if (!state.success) {
-					toast.success(state.message);
-				}
-			}
-		}
-	}, [state, router, scheduleId]);
+    if (state?.message) {
+      if (state.error) {
+        toast.error(state.message, {
+          description: state.error,
+          duration: 5000,
+        });
+      } else {
+        if (!state.success) {
+          toast.success(state.message);
+        }
+      }
+    }
+  }, [state, router, scheduleId]);
 
-	return (
-		<form
-			action={(formData) => {
-				console.log("Submitting form...");
-				formAction(formData);
-			}}
-			className="space-y-6 bg-white p-6 rounded-xl border border-zinc-200 shadow-sm"
-		>
-			<input type="hidden" name="scheduleId" value={scheduleId} />
+  return (
+    <form
+      action={(formData) => {
+        formAction(formData);
+      }}
+      className="space-y-6"
+    >
+      <input type="hidden" name="scheduleId" value={scheduleId} />
 
-			{state?.message && (
-				<div className={`p-4 rounded-lg ${state.error ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-					<p className="font-medium">{state.message}</p>
-					{state.error && <p className="text-sm mt-1 opacity-90">{state.error}</p>}
-				</div>
-			)}
+      {state?.message && state.error && (
+        <Alert variant="destructive">
+          <AlertTitle>{state.message}</AlertTitle>
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {state?.message && !state.error && !state.success && (
+        <Alert>
+          <AlertTitle>{state.message}</AlertTitle>
+        </Alert>
+      )}
 
-			<div>
-				<label
-					htmlFor="name"
-					className="block text-sm font-medium text-zinc-700 mb-1"
-				>
-					Plan Name
-				</label>
-				<input
-					type="text"
-					name="name"
-					id="name"
-					required
-					placeholder="e.g. December 2025"
-					className="w-full rounded-lg border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-				/>
-			</div>
+      <div className="space-y-3">
+        <Label htmlFor="name">Plan Name</Label>
+        <Input
+          type="text"
+          name="name"
+          id="name"
+          required
+          placeholder="e.g. December 2025"
+        />
+      </div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-				<div>
-					<label
-						htmlFor="startDate"
-						className="block text-sm font-medium text-zinc-700 mb-1"
-					>
-						Start Date
-					</label>
-					<input
-						type="date"
-						name="startDate"
-						id="startDate"
-						required
-						className="w-full rounded-lg border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-					/>
-				</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <Label htmlFor="startDate">Start Date</Label>
+          <Input
+            type="date"
+            name="startDate"
+            id="startDate"
+            required
+          />
+        </div>
 
-				<div>
-					<label
-						htmlFor="endDate"
-						className="block text-sm font-medium text-zinc-700 mb-1"
-					>
-						End Date
-					</label>
-					<input
-						type="date"
-						name="endDate"
-						id="endDate"
-						required
-						className="w-full rounded-lg border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-					/>
-				</div>
-			</div>
+        <div className="space-y-3">
+          <Label htmlFor="endDate">End Date</Label>
+          <Input
+            type="date"
+            name="endDate"
+            id="endDate"
+            required
+          />
+        </div>
+      </div>
 
-			<div className="pt-4 flex justify-end gap-3">
-				<a
-					href={`/schedules/${scheduleId}`}
-					className="px-4 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-300 rounded-lg hover:bg-zinc-50"
-				>
-					Cancel
-				</a>
-				<SubmitButton />
-			</div>
-		</form>
-	);
+      <div className="pt-4 flex justify-end gap-3">
+        <Button variant="outline" render={<Link href={`/schedules/${scheduleId}`} />}>Cancel</Button>
+        <SubmitButton />
+      </div>
+    </form>
+  );
 }

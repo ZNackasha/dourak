@@ -1,51 +1,65 @@
 "use client";
 
 import { createScheduleAction } from "@/app/actions/schedule";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button disabled={pending} className="w-full mt-2">
+      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      Create Schedule
+    </Button>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CreateScheduleForm({ calendars }: { calendars: any[] }) {
   return (
     <form action={createScheduleAction} className="space-y-6">
-      <div className="space-y-2">
-        <label htmlFor="name" className="block text-sm font-medium text-zinc-700">
-          Schedule Name
-        </label>
-        <input
+      <div className="space-y-3">
+        <Label htmlFor="name">Schedule Name</Label>
+        <Input
           type="text"
           name="name"
           id="name"
           required
           placeholder="e.g. Sunday Service Rotation"
-          className="w-full rounded-lg border-zinc-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
         />
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="calendarId" className="block text-sm font-medium text-zinc-700">
-          Select Calendar
-        </label>
-        <select
-          name="calendarId"
-          id="calendarId"
-          required
-          className="w-full rounded-lg border-zinc-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
-        >
-          {calendars.map((cal) => (
-            <option key={cal.id} value={cal.id}>
-              {cal.summary}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-zinc-500">Events will be synced from this Google Calendar.</p>
+      <div className="space-y-3">
+        <Label htmlFor="calendarId">Select Calendar</Label>
+        <Select name="calendarId" required defaultValue={calendars[0]?.id}>
+          <SelectTrigger id="calendarId">
+            <SelectValue placeholder="Select a calendar" />
+          </SelectTrigger>
+          <SelectContent>
+            {calendars.map((cal) => (
+              <SelectItem key={cal.id} value={cal.id}>
+                {cal.summary}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[0.8rem] text-muted-foreground">
+          Events will be synced from this Google Calendar.
+        </p>
       </div>
 
-      <div className="pt-2">
-        <button
-          type="submit"
-          className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-        >
-          Create Schedule
-        </button>
-      </div>
+      <SubmitButton />
     </form>
   );
 }
