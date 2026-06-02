@@ -9,6 +9,8 @@ import { Toaster } from "sonner";
 import { auth } from "@/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HelpMenu } from "@/components/onboarding/help-menu";
+import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 
 const themeInitScript = `(() => { try { const t = localStorage.getItem('dourak-theme') || 'system'; const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', isDark); document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'; } catch (_) {} })();`;
 
@@ -59,13 +61,15 @@ export default async function RootLayout({
                     <Calendar className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                     <span className="relative after:absolute after:-bottom-0.5 after:left-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 group-hover:after:w-full">Dourak</span>
                   </Link>
-                  <div className="ml-auto">
+                  <div className="ml-auto flex items-center gap-1">
+                    <HelpMenu />
                     <ThemeToggle />
                   </div>
                 </header>
                 <main className="flex-1 animate-in fade-in duration-300">
                   {children}
                 </main>
+                <WelcomeTour role="volunteer" />
               </SidebarInset>
             </SidebarProvider>
           ) : (

@@ -50,14 +50,38 @@ export default async function SchedulesPage() {
           </Link>
         ))}
         {schedules.length === 0 && (
-          <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
-            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-12 px-6 bg-card rounded-xl border border-dashed border-border animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/20 animate-float">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-foreground font-medium">No schedules found</h3>
-            <p className="text-muted-foreground text-sm mt-1">Create a new schedule to get started.</p>
+            <h3 className="text-foreground font-semibold text-lg">Let&apos;s set up your first schedule</h3>
+            <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
+              A schedule connects to a Google Calendar and lets you coordinate volunteers for its events.
+            </p>
+
+            <ol className="grid gap-3 mt-6 max-w-md mx-auto text-left">
+              {[
+                { n: 1, title: "Create a schedule", desc: "Pick a Google Calendar to sync from." },
+                { n: 2, title: "Add roles & users", desc: "Define what needs to be filled and invite people." },
+                { n: 3, title: "Open a plan for recruitment", desc: "Volunteers sign up for the dates that work." },
+              ].map((s) => (
+                <li key={s.n} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-border/60">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                    {s.n}
+                  </span>
+                  <div className="text-sm">
+                    <div className="font-medium text-foreground">{s.title}</div>
+                    <div className="text-muted-foreground text-xs">{s.desc}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-6">
+              <Button render={<Link href="/schedules/new" />}>Create your first schedule</Button>
+            </div>
           </div>
         )}
       </div>
