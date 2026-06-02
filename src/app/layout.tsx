@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
+import { Calendar } from "lucide-react";
 import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
@@ -50,6 +52,13 @@ export default async function RootLayout({
               <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur px-4">
                   <SidebarTrigger className="-ml-1" />
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 text-lg font-bold text-primary tracking-tight hover:opacity-80 transition-opacity"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    <span>Dourak</span>
+                  </Link>
                   <div className="ml-auto">
                     <ThemeToggle />
                   </div>
@@ -61,9 +70,18 @@ export default async function RootLayout({
             </SidebarProvider>
           ) : (
             <div className="relative flex-1 flex flex-col">
-              <div className="absolute right-4 top-4 z-10">
-                <ThemeToggle />
-              </div>
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur px-4">
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 text-lg font-bold text-primary tracking-tight hover:opacity-80 transition-opacity"
+                >
+                  <Calendar className="w-5 h-5" />
+                  <span>Dourak</span>
+                </Link>
+                <div className="ml-auto">
+                  <ThemeToggle />
+                </div>
+              </header>
               <main className="flex-1 animate-in fade-in duration-300">{children}</main>
             </div>
           )}
