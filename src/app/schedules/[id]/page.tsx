@@ -44,7 +44,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">{schedule.name}</h1>
           <p className="mt-1 text-zinc-500">Manage plans and rotations.</p>

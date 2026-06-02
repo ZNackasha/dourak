@@ -75,19 +75,15 @@ export default async function PlanAdminPage({ params }: { params: Promise<{ id: 
 	});
 
 	return (
-		<div className="space-y-8">
-			<div className="mt-1">
-				<ScheduleView
-					schedule={plan.schedule}
-					plan={plan}
-					events={plan.events}
-					isOwner={true}
-					userRoleIds={userRoleIds}
-					allRoles={allRoles}
-					currentUserId={currentUserId}
-					scheduleUsers={scheduleUsers}
-				/>
-			</div>
-		</div>
+		<ScheduleView
+			schedule={plan.schedule}
+			plan={plan}
+			events={plan.events}
+			isOwner={true}
+			userRoleIds={userRoleIds}
+			allRoles={allRoles}
+			currentUserId={currentUserId}
+			scheduleUsers={scheduleUsers}
+		/>
 	);
 }

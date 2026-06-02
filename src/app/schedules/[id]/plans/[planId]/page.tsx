@@ -59,9 +59,9 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
   });
 
   return (
-    <div className="space-y-8">
+    <>
       {isAdmin && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="max-w-5xl mx-auto pt-10 px-4 sm:px-6 lg:px-8">
           <div className={`border rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${plan.status === 'DRAFT' ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'
             }`}>
             <div className="flex items-start sm:items-center gap-3">
@@ -84,17 +84,15 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       )}
-      <div className={isAdmin ? "-mt-4" : ""}>
-        <ScheduleView
-          schedule={plan.schedule}
-          plan={plan}
-          events={plan.events}
-          isOwner={false} // Always false in this view
-          userRoleIds={userRoleIds}
-          allRoles={allRoles}
-          currentUserId={currentUserId || ""}
-        />
-      </div>
-    </div>
+      <ScheduleView
+        schedule={plan.schedule}
+        plan={plan}
+        events={plan.events}
+        isOwner={false} // Always false in this view
+        userRoleIds={userRoleIds}
+        allRoles={allRoles}
+        currentUserId={currentUserId || ""}
+      />
+    </>
   );
 }
