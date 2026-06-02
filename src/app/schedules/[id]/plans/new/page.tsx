@@ -16,8 +16,8 @@ export default async function NewPlanPage({ params }: { params: Promise<{ id: st
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Create New Plan</h1>
-        <p className="mt-1 text-zinc-500">Set up a new rotation period. Events will be imported from the linked Google Calendar.</p>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">Create New Plan</h1>
+        <p className="mt-1 text-muted-foreground">Set up a new rotation period. Events will be imported from the linked Google Calendar.</p>
       </div>
 
       <CreatePlanForm scheduleId={id} />

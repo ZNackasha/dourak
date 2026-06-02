@@ -457,14 +457,14 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
     : users; // If no role (Any Role position), show all users
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+      <div className="bg-card text-card-foreground rounded-xl p-6 w-full max-w-md shadow-2xl border border-border animate-in zoom-in-95 duration-200">
         <h3 className="text-lg font-semibold mb-4">Assign User to Role</h3>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Select User with Role</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Select User with Role</label>
           <select
-            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="w-full rounded-md border border-input bg-background text-foreground shadow-sm focus:border-ring focus:ring-ring px-2.5 py-1.5 text-sm transition-colors"
             value={selectedUserId}
             onChange={(e) => {
               setSelectedUserId(e.target.value);
@@ -479,16 +479,16 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
         </div>
 
         <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-zinc-200"></div>
-          <span className="flex-shrink-0 mx-4 text-zinc-400 text-xs">OR</span>
-          <div className="flex-grow border-t border-zinc-200"></div>
+          <div className="flex-grow border-t border-border"></div>
+          <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs">OR</span>
+          <div className="flex-grow border-t border-border"></div>
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Enter Name Manually</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Enter Name Manually</label>
           <input
             type="text"
-            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="w-full rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground shadow-sm focus:border-ring focus:ring-ring px-2.5 py-1.5 text-sm transition-colors"
             placeholder="John Doe"
             value={name}
             onChange={(e) => {
@@ -501,7 +501,7 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 rounded-md hover:bg-zinc-200"
+            className="px-4 py-2 text-sm font-medium text-foreground bg-muted rounded-md hover:bg-muted/80 transition-colors"
           >
             Cancel
           </button>
@@ -514,7 +514,7 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
               }
             }}
             disabled={!selectedUserId && !name}
-            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Assign User
           </button>
@@ -529,14 +529,14 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+      <div className="bg-card text-card-foreground rounded-xl p-6 w-full max-w-md shadow-2xl border border-border animate-in zoom-in-95 duration-200">
         <h3 className="text-lg font-semibold mb-4">Add Available User</h3>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Select Existing User</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Select Existing User</label>
           <select
-            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="w-full rounded-md border border-input bg-background text-foreground shadow-sm focus:border-ring focus:ring-ring px-2.5 py-1.5 text-sm transition-colors"
             value={selectedUser}
             onChange={(e) => {
               setSelectedUser(e.target.value);
@@ -551,16 +551,16 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
         </div>
 
         <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-zinc-200"></div>
-          <span className="flex-shrink-0 mx-4 text-zinc-400 text-xs">OR</span>
-          <div className="flex-grow border-t border-zinc-200"></div>
+          <div className="flex-grow border-t border-border"></div>
+          <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs">OR</span>
+          <div className="flex-grow border-t border-border"></div>
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Enter Email Manually</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Enter Email Manually</label>
           <input
             type="email"
-            className="w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="w-full rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground shadow-sm focus:border-ring focus:ring-ring px-2.5 py-1.5 text-sm transition-colors"
             placeholder="user@example.com"
             value={email}
             onChange={(e) => {
@@ -573,14 +573,14 @@ function AssignVolunteerDialog({ isOpen, onClose, onAssignUser, onAssignManual, 
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 rounded-md hover:bg-zinc-200"
+            className="px-4 py-2 text-sm font-medium text-foreground bg-muted rounded-md hover:bg-muted/80 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={() => onAdd(selectedUser || email)}
             disabled={!selectedUser && !email}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Add User
           </button>
@@ -621,12 +621,12 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
           setIsAddingPosition(!isAddingPosition);
           setSelectedRole("");
         }}
-        className="text-xs font-medium text-zinc-400 hover:text-indigo-600 border border-dashed border-zinc-300 hover:border-indigo-300 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
+        className="text-xs font-medium text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary/40 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
       >
         + Position
       </button>
       {isAddingPosition && (
-        <div className="absolute right-0 top-full mt-2 bg-white border border-zinc-100 shadow-xl rounded-xl p-4 z-50 w-72 ring-1 ring-black/5">
+        <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground border border-border shadow-xl rounded-xl p-4 z-50 w-72 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150">
           <form action={async (formData) => {
             try {
               await addShiftAction(formData);
@@ -640,21 +640,21 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
           }}>
             <input type="hidden" name="eventId" value={eventId} />
             <input type="hidden" name="scheduleId" value={scheduleId} />
-            <label className="block text-xs font-medium text-zinc-500 mb-2">Select Role</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">Select Role</label>
             <select
               name="roleId"
-              className="w-full text-sm border-zinc-200 rounded-md text-zinc-700 focus:ring-indigo-500 focus:border-indigo-500 mb-3"
+              className="w-full text-sm border border-input bg-background text-foreground rounded-md focus:ring-ring focus:border-ring mb-3 px-2.5 py-1.5 transition-colors"
               size={5}
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >
               {!hasAnyShifts && (
-                <option value="" className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded font-medium text-indigo-600">
+                <option value="" className="py-1.5 px-2 cursor-pointer rounded font-medium text-primary">
                   Any Role (No Specific Role)
                 </option>
               )}
               {allRoles.map((role: any) => (
-                <option key={role.id} value={role.id} className="py-1.5 px-2 hover:bg-indigo-50 cursor-pointer rounded">
+                <option key={role.id} value={role.id} className="py-1.5 px-2 cursor-pointer rounded">
                   {role.name}
                 </option>
               ))}
@@ -663,31 +663,31 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
             <button
               type="button"
               onClick={() => router.push(`/schedules/${scheduleId}/roles`)}
-              className="w-full text-sm font-medium text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-300 hover:border-indigo-400 hover:bg-indigo-50 rounded-md px-3 py-2 mb-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full text-sm font-medium text-primary hover:opacity-80 border border-dashed border-primary/40 hover:border-primary/60 hover:bg-primary/5 rounded-md px-3 py-2 mb-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               + Create New Role
             </button>
 
-            <label className="block text-xs font-medium text-zinc-500 mb-1">Needed Count</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Needed Count</label>
             <input
               type="number"
               name="needed"
               defaultValue={1}
               min={1}
-              className="w-full text-sm border-zinc-200 rounded-md text-zinc-700 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full text-sm border border-input bg-background text-foreground rounded-md focus:ring-ring focus:border-ring px-2.5 py-1.5 transition-colors"
             />
 
-            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-zinc-50">
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-border">
               <button
                 type="button"
                 onClick={() => setIsAddingPosition(false)}
-                className="text-xs font-medium text-zinc-500 px-3 py-2 hover:text-zinc-800 hover:bg-zinc-50 rounded-md transition-colors"
+                className="text-xs font-medium text-muted-foreground px-3 py-2 hover:text-foreground hover:bg-muted rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="text-xs font-medium bg-indigo-600 text-white px-3 py-2 rounded-md hover:bg-indigo-700 shadow-sm transition-colors"
+                className="text-xs font-medium bg-primary text-primary-foreground px-3 py-2 rounded-md hover:bg-primary/90 shadow-sm transition-colors"
               >
                 Add Position
               </button>

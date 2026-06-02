@@ -426,11 +426,11 @@ export function ScheduleView({
           <div className="flex flex-wrap items-center gap-3">
             {isOwner && (
               <>
-                <div className="flex items-center gap-2 bg-zinc-50 p-1 rounded-xl border border-zinc-200">
+                <div className="flex items-center gap-2 bg-muted p-1 rounded-xl border border-border">
                   <select
                     value={plan.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="appearance-none cursor-pointer px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm focus:ring-indigo-500 focus:border-indigo-500 pr-8"
+                    className="appearance-none cursor-pointer px-3 py-1.5 bg-card border border-input rounded-lg text-sm font-medium text-foreground hover:bg-muted hover:border-input transition-colors shadow-sm focus:ring-ring focus:border-ring pr-8"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                       backgroundPosition: `right 0.5rem center`,
