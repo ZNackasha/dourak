@@ -66,22 +66,22 @@ function DateGroup({
   return (
     <div className="space-y-4">
       <div
-        className="flex items-center justify-between sticky top-0 bg-zinc-50/95 backdrop-blur-sm z-10 py-3 border-b border-zinc-200/50 group"
+        className="flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-3 border-b border-border/50 group"
       >
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 hover:text-zinc-600 transition-colors focus:outline-none"
+          className="flex items-center gap-2 hover:text-muted-foreground transition-colors focus:outline-none"
         >
           <svg
-            className={`w-5 h-5 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+            className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <h2 className="text-lg font-semibold text-zinc-900">{date}</h2>
-          <span className="text-sm text-zinc-400 font-normal ml-2">
+          <h2 className="text-lg font-semibold text-foreground">{date}</h2>
+          <span className="text-sm text-muted-foreground font-normal ml-2">
             ({events.length} event{events.length !== 1 ? 's' : ''})
           </span>
         </button>
@@ -94,8 +94,8 @@ function DateGroup({
             }}
             disabled={volunteeringDate === date}
             className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors border ${isFullyBooked
-              ? "text-red-600 border-red-200 hover:bg-red-50"
-              : "text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              ? "text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-950/40"
+              : "text-primary border-primary/30 hover:bg-primary/10"
               }`}
           >
             {volunteeringDate === date ? (
@@ -387,16 +387,16 @@ export function ScheduleView({
     <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <div className="mb-10 flex flex-col gap-6">
         {!currentUserId && (
-          <div className="bg-indigo-50/80 border border-indigo-100 rounded-2xl p-5 flex items-start gap-4 shadow-sm">
-            <div className="p-2 bg-indigo-100 rounded-full text-indigo-600">
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex items-start gap-4 shadow-sm">
+            <div className="p-2 bg-primary/10 rounded-full text-primary">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-semibold text-indigo-900">Guest View</h3>
-              <p className="text-sm text-indigo-700 mt-1 leading-relaxed">
-                You are viewing this schedule as a guest. <a href="/api/auth/signin" className="underline hover:text-indigo-900 font-medium decoration-indigo-300 underline-offset-2">Sign in</a> to see events that match your roles and to volunteer.
+              <h3 className="text-base font-semibold text-foreground">Guest View</h3>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                You are viewing this schedule as a guest. <a href="/api/auth/signin" className="underline hover:text-foreground font-medium decoration-primary/40 underline-offset-2 text-primary">Sign in</a> to see events that match your roles and to volunteer.
               </p>
             </div>
           </div>
@@ -405,16 +405,16 @@ export function ScheduleView({
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
           <div className="space-y-2">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
-                <a href={`/schedules/${schedule.id}`} className="hover:text-zinc-600 transition-colors">
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">
+                <a href={`/schedules/${schedule.id}`} className="hover:text-muted-foreground transition-colors">
                   {schedule.name}
                 </a>
               </h1>
-              <span className="text-zinc-300 text-2xl font-light">/</span>
-              <span className="text-2xl font-medium text-zinc-500">{plan.name}</span>
+              <span className="text-muted-foreground/50 text-2xl font-light">/</span>
+              <span className="text-2xl font-medium text-muted-foreground">{plan.name}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 bg-zinc-50 w-fit px-3 py-1 rounded-full border border-zinc-100">
-              <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-muted w-fit px-3 py-1 rounded-full border border-border">
+              <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>
@@ -445,15 +445,15 @@ export function ScheduleView({
                     <option value="ARCHIVED">Archived</option>
                   </select>
 
-                  <div className="h-4 w-px bg-zinc-200 mx-1"></div>
+                  <div className="h-4 w-px bg-border mx-1"></div>
 
                   <div className="relative group/share">
                     <button
                       onClick={handleShare}
                       disabled={plan.status === "DRAFT" || plan.status === "ARCHIVED"}
                       className={`p-1.5 rounded-lg transition-colors ${plan.status === "DRAFT" || plan.status === "ARCHIVED"
-                        ? "text-zinc-300 cursor-not-allowed"
-                        : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50"
+                        ? "text-muted-foreground/50 cursor-not-allowed"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                         }`}
                       title="Share Plan"
                     >
@@ -466,7 +466,7 @@ export function ScheduleView({
                   {plan.status === "SCHEDULED" && (
                     <button
                       onClick={handleSendNotifications}
-                      className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 transition-colors"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                       title="Send Notifications"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -477,7 +477,7 @@ export function ScheduleView({
 
                   <button
                     onClick={handleDeletePlan}
-                    className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/40 transition-colors"
                     title="Delete Plan"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -489,8 +489,8 @@ export function ScheduleView({
                 <button
                   onClick={() => setIsImpersonating(!isImpersonating)}
                   className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-sm font-medium transition-all shadow-sm ${isImpersonating
-                    ? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700"
-                    : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300"
+                    ? "bg-primary border-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-card border-border text-foreground hover:bg-muted hover:border-input"
                     }`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -505,16 +505,16 @@ export function ScheduleView({
         </div>
 
         {isOwner && isImpersonating && (
-          <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2">
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+              <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .884-.56 1.6-1.357 1.994M16 6c0 .884.56 1.6 1.357 1.994" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-indigo-900">Impersonating Roles</h3>
-                <p className="text-xs text-indigo-600">Select roles to see what they see</p>
+                <h3 className="text-sm font-semibold text-foreground">Impersonating Roles</h3>
+                <p className="text-xs text-muted-foreground">Select roles to see what they see</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -525,8 +525,8 @@ export function ScheduleView({
                     key={role.id}
                     onClick={() => toggleImpersonatedRole(role.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${isSelected
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm ring-2 ring-indigo-200 ring-offset-1"
-                      : "bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600 hover:shadow-sm"
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm ring-2 ring-ring/40 ring-offset-1 ring-offset-background"
+                      : "bg-card text-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-sm"
                       }`}
                   >
                     {role.name}
@@ -535,7 +535,7 @@ export function ScheduleView({
                 );
               })}
               {allRoles.length === 0 && (
-                <span className="text-xs text-zinc-400 italic">No roles available to impersonate.</span>
+                <span className="text-xs text-muted-foreground italic">No roles available to impersonate.</span>
               )}
             </div>
           </div>
@@ -587,8 +587,8 @@ export function ScheduleView({
             ))
           )}
           {filteredEvents.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-xl border border-dashed border-zinc-200">
-              <p className="text-zinc-500">No events found in this schedule.</p>
+            <div className="text-center py-16 bg-card rounded-xl border border-dashed border-border">
+              <p className="text-muted-foreground">No events found in this schedule.</p>
             </div>
           )}
         </div>

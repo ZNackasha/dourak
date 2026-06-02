@@ -80,7 +80,7 @@ export function EventCard({
 
   const seriesColor = event.recurringEventId
     ? getSeriesColor(event.recurringEventId)
-    : "bg-zinc-100";
+    : "bg-muted";
 
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
@@ -98,26 +98,26 @@ export function EventCard({
   const timeStr = format(new Date(event.start), "h:mm a");
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-all duration-200 group flex">
+    <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border hover:shadow-md transition-all duration-200 group flex">
       <div className={`w-1.5 flex-shrink-0 rounded-l-xl ${seriesColor}`} title={event.recurringEventId ? "Repeating Event Series" : "Single Event"} />
       <div className="p-2 sm:p-3 flex-1 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-3">
           <div className="flex-1 min-w-fit">
             <div className="flex items-center gap-2 sm:gap-3 mb-0.5 sm:mb-1">
-              <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+              <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 <span>{dateStr}</span>
-                <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                <span className="w-1 h-1 rounded-full bg-muted-foreground/40"></span>
                 <span>{timeStr}</span>
                 {relatedEvents && relatedEvents.length > 1 && (
                   <div className="relative group/times ml-1">
-                    <span className="bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded text-[10px] cursor-help">
+                    <span className="bg-muted text-foreground px-1.5 py-0.5 rounded text-[10px] cursor-help">
                       +{relatedEvents.length - 1} more
                     </span>
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-zinc-200 rounded-lg shadow-lg p-2 hidden group-hover/times:block z-50 max-h-64 overflow-y-auto">
-                      <div className="text-[10px] font-bold text-zinc-400 mb-1 uppercase tracking-wider">All Occurrences</div>
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-popover text-popover-foreground border border-border rounded-lg shadow-lg p-2 hidden group-hover/times:block z-50 max-h-64 overflow-y-auto">
+                      <div className="text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">All Occurrences</div>
                       <div className="space-y-1">
                         {relatedEvents.map((e: any) => (
-                          <div key={e.id} className="text-xs text-zinc-600 flex justify-between">
+                          <div key={e.id} className="text-xs text-muted-foreground flex justify-between">
                             <span>{format(new Date(e.start), "MMM d")}</span>
                             <span>{format(new Date(e.start), "h:mm a")}</span>
                           </div>
@@ -127,12 +127,12 @@ export function EventCard({
                   </div>
                 )}
               </div>
-              <div className="h-px flex-1 bg-zinc-100 sm:hidden"></div>
+              <div className="h-px flex-1 bg-border sm:hidden"></div>
             </div>
-            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 leading-tight flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-semibold text-foreground leading-tight flex items-center gap-2">
               {event.title}
               {event.recurringEventId && (
-                <span className="text-zinc-400" title="Repeating Event">
+                <span className="text-muted-foreground" title="Repeating Event">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -152,7 +152,7 @@ export function EventCard({
                 />
                 <button
                   onClick={() => setIsAddUserOpen(true)}
-                  className="text-xs font-medium text-zinc-400 hover:text-violet-600 border border-dashed border-zinc-300 hover:border-violet-300 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
+                  className="text-xs font-medium text-muted-foreground hover:text-violet-500 dark:hover:text-violet-300 border border-dashed border-border hover:border-violet-400/60 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
                   title="Add Available User"
                 >
                   + User
@@ -184,7 +184,7 @@ export function EventCard({
                     toast.error("Failed to update availability");
                   }
                 }}
-                className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+                className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 bg-card text-foreground ring-1 ring-border hover:ring-ring hover:text-primary hover:shadow-sm"
               >
                 Available
               </button>
@@ -283,12 +283,12 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
         role="button"
         onClick={!isOwner ? handleToggle : undefined}
         className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isConfirmed
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50 dark:hover:bg-emerald-950/60"
           : isAssigned
-            ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+            ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/50 dark:hover:bg-blue-950/60"
             : isAvailable
-              ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
-              : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:ring-indigo-500 hover:text-indigo-600 hover:shadow-sm"
+              ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/50 dark:hover:bg-indigo-950/60"
+              : "bg-card text-foreground ring-1 ring-border hover:ring-ring hover:text-primary hover:shadow-sm"
           } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer ? "cursor-pointer" : "cursor-default"}`}
         title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
       >
@@ -300,7 +300,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
           isOwner && shift.assignments.length > 0 ? (
             <div className="flex items-center gap-2">
               {shift.assignments.map((assignment: any) => (
-                <div key={assignment.id} className="flex items-center gap-1 bg-white/50 px-1.5 py-0.5 rounded border border-zinc-200/50">
+                <div key={assignment.id} className="flex items-center gap-1 bg-background/60 dark:bg-background/30 px-1.5 py-0.5 rounded border border-border/60">
                   <span>{assignment.name || assignment.email || assignment.user?.email}</span>
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
@@ -315,7 +315,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
                           toast.success("Confirmed");
                         } catch { toast.error("Failed"); }
                       }}
-                      className="text-indigo-600 hover:text-indigo-800 font-bold px-1 hover:bg-indigo-50 rounded"
+                      className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200 font-bold px-1 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 rounded"
                     >✓</button>
                   )}
                   {assignment.status === 'CONFIRMED' && (
@@ -327,7 +327,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
                           toast.success("Unconfirmed");
                         } catch { toast.error("Failed"); }
                       }}
-                      className="text-amber-600 hover:text-amber-800 font-bold px-1 hover:bg-amber-50 rounded"
+                      className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 font-bold px-1 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded"
                     >↺</button>
                   )}
                 </div>
@@ -378,17 +378,17 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
 function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser }: any) {
   return (
     <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-2 hidden group-hover/role:block z-10">
-      <div className="flex items-center bg-white shadow-xl border border-zinc-100 rounded-lg p-1 min-w-max">
+      <div className="flex items-center bg-popover text-popover-foreground shadow-xl border border-border rounded-lg p-1 min-w-max">
         <button
           onClick={onOpenAssignUser}
-          className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-md transition-all"
+          className="p-1.5 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-all"
           title="Assign User"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
         </button>
-        <div className="w-px h-4 bg-zinc-100 mx-0.5"></div>
+        <div className="w-px h-4 bg-border mx-0.5"></div>
         <button
           onClick={async () => {
             const newName = prompt("Enter new name for this position:", shift.name || shift.role?.name || "Any Role");
@@ -396,7 +396,7 @@ function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser }: a
               await updateShiftAction(shift.id, scheduleId, { name: newName.trim() });
             }
           }}
-          className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-md transition-all"
+          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all"
           title="Rename Position"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -410,7 +410,7 @@ function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser }: a
               await updateShiftAction(shift.id, scheduleId, { needed: parseInt(newNeeded) });
             }
           }}
-          className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-all"
+          className="p-1.5 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-md transition-all"
           title="Change Needed Count"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -433,7 +433,7 @@ function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser }: a
               }
             });
           }}
-          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+          className="p-1.5 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-all"
           title="Remove Role"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -707,7 +707,7 @@ function AssignmentsList({ shifts, isOwner, scheduleId, planStatus }: any) {
   if (!hasAvailability) return null;
 
   return (
-    <div className="border-t border-zinc-50">
+    <div className="border-t border-border">
       {isOwner && <AvailableVolunteersList shifts={shifts} scheduleId={scheduleId} planStatus={planStatus} />}
     </div>
   );
@@ -719,18 +719,18 @@ function AvailableVolunteersList({ shifts, scheduleId, planStatus }: any) {
 
   return (
     <div className="mt-3">
-      <h4 className="text-xs font-semibold text-zinc-500 mb-2">Available Users:</h4>
+      <h4 className="text-xs font-semibold text-muted-foreground mb-2">Available Users:</h4>
       <div className="flex flex-wrap gap-2">
         {shifts.flatMap((s: any) => (s.availabilities || []).map((a: any) => ({ ...a, shift: s }))).map((availability: any) => (
           <div
             key={availability.id}
-            className="flex items-center gap-2 bg-indigo-50 px-2.5 py-1.5 rounded-md text-xs border border-indigo-100"
+            className="flex items-center gap-2 bg-primary/10 px-2.5 py-1.5 rounded-md text-xs border border-primary/20"
           >
-            <span className="font-medium text-indigo-700">{availability.user?.name || availability.user?.email}</span>
+            <span className="font-medium text-primary">{availability.user?.name || availability.user?.email}</span>
             {availability.shift?.role && (
               <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-indigo-100 shadow-sm"
-                style={{ color: availability.shift.role.color || '#666' }}
+                className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-card border border-border shadow-sm"
+                style={{ color: availability.shift.role.color || 'var(--foreground)' }}
               >
                 {availability.shift.role.name}
               </span>
@@ -744,7 +744,7 @@ function AvailableVolunteersList({ shifts, scheduleId, planStatus }: any) {
                   toast.error("Failed to assign volunteer");
                 }
               }}
-              className="ml-1 text-indigo-600 hover:text-indigo-800 font-bold p-0.5 hover:bg-indigo-100 rounded"
+              className="ml-1 text-primary hover:opacity-80 font-bold p-0.5 hover:bg-primary/15 rounded"
               title="Assign"
             >
               +
@@ -765,7 +765,7 @@ function AvailableVolunteersList({ shifts, scheduleId, planStatus }: any) {
                   }
                 });
               }}
-              className="ml-1 text-red-400 hover:text-red-600 font-bold p-0.5 hover:bg-red-50 rounded"
+              className="ml-1 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-bold p-0.5 hover:bg-red-50 dark:hover:bg-red-950/40 rounded"
               title="Remove Availability"
             >
               ×
