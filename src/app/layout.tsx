@@ -5,6 +5,10 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Toaster } from "sonner";
 import { auth } from "@/auth";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+
+const themeInitScript = `(() => { try { const t = localStorage.getItem('dourak-theme') || 'system'; const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', isDark); document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'; } catch (_) {} })();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,27 +35,40 @@ export default async function RootLayout({
   const isAuthed = !!session?.user;
 
   return (
-    <html lang="en" className="h-full bg-zinc-50">
+    <html lang="en" className="h-full bg-background" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full flex flex-col`}
         suppressHydrationWarning
       >
-        {isAuthed ? (
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
-                <SidebarTrigger className="-ml-1" />
-              </header>
-              <main className="flex-1">
-                {children}
-              </main>
-            </SidebarInset>
-          </SidebarProvider>
-        ) : (
-          <main className="flex-1">{children}</main>
-        )}
-        <Toaster position="top-center" richColors />
+        <ThemeProvider>
+          {isAuthed ? (
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur px-4">
+                  <SidebarTrigger className="-ml-1" />
+                  <div className="ml-auto">
+                    <ThemeToggle />
+                  </div>
+                </header>
+                <main className="flex-1 animate-in fade-in duration-300">
+                  {children}
+                </main>
+              </SidebarInset>
+            </SidebarProvider>
+          ) : (
+            <div className="relative flex-1 flex flex-col">
+              <div className="absolute right-4 top-4 z-10">
+                <ThemeToggle />
+              </div>
+              <main className="flex-1 animate-in fade-in duration-300">{children}</main>
+            </div>
+          )}
+          <Toaster position="top-center" richColors theme="system" />
+        </ThemeProvider>
       </body>
     </html>
   );

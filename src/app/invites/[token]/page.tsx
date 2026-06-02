@@ -40,16 +40,16 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 	}
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4">
-			<div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-zinc-100">
-				<div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+		<div className="min-h-screen flex items-center justify-center bg-background px-4">
+			<div className="max-w-md w-full bg-card rounded-2xl shadow-xl p-8 text-center border border-border animate-in fade-in slide-in-from-bottom-4 duration-500">
+				<div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
 					<svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
 					</svg>
 				</div>
 
-				<h1 className="text-2xl font-bold text-zinc-900 mb-2">You're Invited!</h1>
-				<p className="text-zinc-600 mb-8">
+				<h1 className="text-2xl font-bold text-foreground mb-2">You&apos;re Invited!</h1>
+				<p className="text-muted-foreground mb-8">
 					You've been invited to join the <strong>{role.name}</strong> role
 					{role.schedule && <span> for <strong>{role.schedule.name}</strong></span>}.
 				</p>
@@ -60,7 +60,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 					</Button>
 				</form>
 
-				<p className="mt-6 text-xs text-zinc-400">
+				<p className="mt-6 text-xs text-muted-foreground">
 					Signed in as {session.user.email}
 				</p>
 			</div>

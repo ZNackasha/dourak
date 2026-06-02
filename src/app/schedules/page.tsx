@@ -16,8 +16,8 @@ export default async function SchedulesPage() {
     <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Schedules</h1>
-          <p className="mt-1 text-zinc-500">Manage your service rotations and events.</p>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Schedules</h1>
+          <p className="mt-1 text-muted-foreground">Manage your service rotations and events.</p>
         </div>
         <Button render={<Link href="/schedules/new" />}>
           Create New
@@ -25,22 +25,23 @@ export default async function SchedulesPage() {
       </div>
 
       <div className="grid gap-4">
-        {schedules.map((schedule) => (
+        {schedules.map((schedule, idx) => (
           <Link
             key={schedule.id}
             href={`/schedules/${schedule.id}`}
-            className="block p-6 bg-white rounded-xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all group"
+            style={{ animationDelay: `${idx * 60}ms` }}
+            className="block p-6 bg-card rounded-xl border border-border hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all group animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300"
           >
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors">
+                <h2 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                   {schedule.name}
                 </h2>
-                <p className="text-zinc-500 mt-1 text-sm">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Manage plans and roles
                 </p>
               </div>
-              <span className="text-zinc-400 group-hover:text-indigo-500">
+              <span className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -49,14 +50,14 @@ export default async function SchedulesPage() {
           </Link>
         ))}
         {schedules.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-xl border border-dashed border-zinc-200">
-            <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
+            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-zinc-900 font-medium">No schedules found</h3>
-            <p className="text-zinc-500 text-sm mt-1">Create a new schedule to get started.</p>
+            <h3 className="text-foreground font-medium">No schedules found</h3>
+            <p className="text-muted-foreground text-sm mt-1">Create a new schedule to get started.</p>
           </div>
         )}
       </div>

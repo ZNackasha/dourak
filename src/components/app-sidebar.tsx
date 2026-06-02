@@ -23,8 +23,8 @@ export async function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <Link href="/" className="text-xl font-bold text-indigo-600 tracking-tight flex items-center gap-2">
-          <Calendar className="w-6 h-6" />
+        <Link href="/" className="text-xl font-bold text-primary tracking-tight flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Calendar className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12" />
           <span>Dourak</span>
         </Link>
       </SidebarHeader>
@@ -56,7 +56,7 @@ export async function AppSidebar() {
           <div className="flex items-center gap-3 w-full">
             <Avatar className="h-9 w-9">
               <AvatarImage src={session.user.image ?? undefined} />
-              <AvatarFallback className="bg-indigo-100 text-indigo-600 font-bold">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold">
                 {session.user.name?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>
@@ -85,12 +85,12 @@ export async function AppSidebar() {
           </div>
         ) : (
           <div className="w-full flex justify-center">
-             <Link
-                href="/"
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Sign in
-              </Link>
+            <Link
+              href="/"
+              className="text-sm font-medium text-primary hover:opacity-80 transition-opacity"
+            >
+              Sign in
+            </Link>
           </div>
         )}
       </SidebarFooter>

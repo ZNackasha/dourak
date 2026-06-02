@@ -46,8 +46,8 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
     <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">{schedule.name}</h1>
-          <p className="mt-1 text-zinc-500">Manage plans and rotations.</p>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">{schedule.name}</h1>
+          <p className="mt-1 text-muted-foreground">Manage plans and rotations.</p>
         </div>
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
@@ -73,28 +73,29 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
       )}
 
       <div className="grid gap-4">
-        {schedule.plans.map((plan) => (
+        {schedule.plans.map((plan, idx) => (
           <Link
             key={plan.id}
             href={isAdmin ? `/schedules/${id}/plans/${plan.id}/admin` : `/schedules/${id}/plans/${plan.id}`}
-            className="block p-6 bg-white rounded-xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all group"
+            style={{ animationDelay: `${idx * 60}ms` }}
+            className="block p-6 bg-card rounded-xl border border-border hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all group animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300"
           >
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors">
+                <h2 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                   {plan.name}
                 </h2>
-                <p className="text-zinc-500 mt-1 text-sm">
+                <p className="text-muted-foreground mt-1 text-sm">
                   {plan.startDate.toLocaleDateString(undefined, { dateStyle: 'medium' })} - {plan.endDate.toLocaleDateString(undefined, { dateStyle: 'medium' })}
                 </p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${plan.status === 'RECRUITMENT' ? 'bg-green-100 text-green-800' :
-                  plan.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${plan.status === 'RECRUITMENT' ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300' :
+                  plan.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300' :
+                    'bg-muted text-muted-foreground'
                   }`}>
                   {plan.status}
                 </span>
               </div>
-              <span className="text-zinc-400 group-hover:text-indigo-500">
+              <span className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -103,9 +104,9 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
           </Link>
         ))}
         {schedule.plans.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-xl border border-dashed border-zinc-200">
-            <h3 className="text-zinc-900 font-medium">No plans found</h3>
-            <p className="text-zinc-500 text-sm mt-1">Create a new plan to get started.</p>
+          <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
+            <h3 className="text-foreground font-medium">No plans found</h3>
+            <p className="text-muted-foreground text-sm mt-1">Create a new plan to get started.</p>
           </div>
         )}
       </div>

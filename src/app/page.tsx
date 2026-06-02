@@ -9,17 +9,17 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 text-zinc-900">
-      <div className="max-w-md text-center space-y-8 p-8">
-        <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-200 rotate-3">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+      <div className="max-w-md text-center space-y-8 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30 animate-float">
           <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Dourak</h1>
-          <p className="text-lg text-zinc-500">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">Dourak</h1>
+          <p className="text-lg text-muted-foreground">
             Coordinate users with Google Calendar integration.
           </p>
         </div>
@@ -32,7 +32,7 @@ export default async function Home() {
         >
           <button
             type="submit"
-            className="w-full rounded-xl bg-zinc-900 px-6 py-3.5 text-base font-semibold text-white transition hover:bg-zinc-800 shadow-lg shadow-zinc-200 hover:shadow-xl flex items-center justify-center gap-3"
+            className="w-full rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background transition-all hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-foreground/10 hover:shadow-xl flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -46,10 +46,10 @@ export default async function Home() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-zinc-200" />
+            <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-zinc-50 px-2 text-zinc-500">Or continue with email</span>
+            <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
           </div>
         </div>
 
@@ -65,11 +65,11 @@ export default async function Home() {
             name="email"
             placeholder="name@example.com"
             required
-            className="w-full rounded-xl border-zinc-200 bg-white px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary shadow-sm transition-colors"
           />
           <button
             type="submit"
-            className="w-full rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-zinc-900 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 transition shadow-sm flex items-center justify-center"
+            className="w-full rounded-xl bg-card px-6 py-3.5 text-base font-semibold text-foreground ring-1 ring-inset ring-border hover:bg-muted hover:-translate-y-0.5 transition-all active:translate-y-0 shadow-sm flex items-center justify-center"
           >
             Sign in with Email
           </button>

@@ -22,16 +22,16 @@ export default async function ScheduleUsersPage({
 		<div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
 			<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
+					<h1 className="text-3xl font-bold text-foreground tracking-tight">
 						Manage Users
 					</h1>
-					<p className="mt-1 text-zinc-500">
+					<p className="mt-1 text-muted-foreground">
 						View and assign roles to users in this schedule.
 					</p>
 				</div>
 				<a
 					href={`/schedules/${id}`}
-					className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
+					className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
 				>
 					&larr; Back to Schedule
 				</a>
