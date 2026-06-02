@@ -30,7 +30,8 @@ function DateGroup({
   scheduleUsers,
   recurringInstances,
   onVolunteerAll,
-  volunteeringDate
+  volunteeringDate,
+  cheeringDate,
 }: {
   date: string;
   events: any[];
@@ -44,6 +45,7 @@ function DateGroup({
   recurringInstances: Map<string, any[]>;
   onVolunteerAll: (date: string, events: any[], action: "volunteer" | "cancel") => void;
   volunteeringDate: string | null;
+  cheeringDate?: string | null;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -93,11 +95,30 @@ function DateGroup({
               onVolunteerAll(date, events, isFullyBooked ? "cancel" : "volunteer");
             }}
             disabled={volunteeringDate === date}
-            className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors border ${isFullyBooked
+            className={`relative text-sm font-medium px-4 py-1.5 rounded-full transition-colors border press-down ${cheeringDate === date ? "animate-cheer" : ""} ${isFullyBooked
               ? "text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-950/40"
               : "text-primary border-primary/30 hover:bg-primary/10"
               }`}
           >
+            {cheeringDate === date && (
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+                <span className="absolute inset-0 rounded-full animate-ring-burst" style={{ boxShadow: "0 0 0 2px var(--primary)" }} />
+                {["🎉", "✨", "🎊", "⭐", "💫"].map((e, i) => (
+                  <span
+                    key={i}
+                    className="absolute text-base animate-confetti will-change-transform"
+                    style={{
+                      // @ts-expect-error custom CSS vars
+                      "--cx": `${(i - 2) * 14}px`,
+                      "--cr": `${(i % 2 === 0 ? 1 : -1) * 220}deg`,
+                      animationDelay: `${i * 40}ms`,
+                    }}
+                  >
+                    {e}
+                  </span>
+                ))}
+              </span>
+            )}
             {volunteeringDate === date ? (
               <span className="flex items-center gap-2">
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -156,6 +177,7 @@ export function ScheduleView({
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonatedRoleIds, setImpersonatedRoleIds] = useState<string[]>([]);
   const [volunteeringDate, setVolunteeringDate] = useState<string | null>(null);
+  const [cheeringDate, setCheeringDate] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
   const viewMode = (plan.status === "SCHEDULED" || plan.status === "ARCHIVED") ? "matrix" : "cards";
@@ -281,6 +303,8 @@ export function ScheduleView({
       if (assignments.length > 0) {
         if (action === "volunteer") {
           await volunteerForMultipleEventsAction(schedule.id, assignments);
+          setCheeringDate(date);
+          setTimeout(() => setCheeringDate(null), 900);
         } else {
           await cancelMultipleVolunteersAction(schedule.id, assignments);
         }
@@ -583,6 +607,7 @@ export function ScheduleView({
                 recurringInstances={recurringInstances}
                 onVolunteerAll={handleVolunteerAll}
                 volunteeringDate={volunteeringDate}
+                cheeringDate={cheeringDate}
               />
             ))
           )}

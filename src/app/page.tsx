@@ -11,15 +11,15 @@ export default async function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
       <div className="max-w-md text-center space-y-8 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30 animate-float">
-          <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="group w-20 h-20 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30 animate-float animate-gradient hover:animate-jelly cursor-default">
+          <svg className="w-10 h-10 text-white transition-transform duration-500 group-hover:rotate-[360deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">Dourak</h1>
-          <p className="text-lg text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground animate-in fade-in slide-in-from-bottom-2 duration-700 delay-100 fill-mode-both">Dourak</h1>
+          <p className="text-lg text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-700 delay-200 fill-mode-both">
             Coordinate users with Google Calendar integration.
           </p>
         </div>
@@ -32,9 +32,9 @@ export default async function Home() {
         >
           <button
             type="submit"
-            className="w-full rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background transition-all hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-foreground/10 hover:shadow-xl flex items-center justify-center gap-3"
+            className="group w-full rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background transition-all hover:opacity-95 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] shadow-lg shadow-foreground/10 hover:shadow-xl hover:shadow-foreground/20 flex items-center justify-center gap-3 press-down"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />

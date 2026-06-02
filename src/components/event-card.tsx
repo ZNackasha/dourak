@@ -61,6 +61,14 @@ export function EventCard({
   const shifts = event.shifts;
   const hasRoles = shifts.some((s: any) => s.roleId);
 
+  // The shift (if any) the current user is already on for this event
+  const userActiveShift = !isOwner && currentUserId
+    ? shifts.find((s: any) =>
+      s.assignments?.some((a: any) => a.userId === currentUserId) ||
+      s.availabilities?.some((a: any) => a.userId === currentUserId)
+    )
+    : undefined;
+
   // Visibility Check
   if (!isOwner) {
     if (hasRoles) {
@@ -171,6 +179,7 @@ export function EventCard({
                 userRoleIds={userRoleIds}
                 planStatus={planStatus}
                 scheduleUsers={scheduleUsers}
+                userActiveShift={userActiveShift}
               />
             ))}
 
@@ -212,11 +221,42 @@ export function EventCard({
   );
 }
 
-function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleIds, planStatus, scheduleUsers = [] }: any) {
+const CONFETTI_PIECES = [
+  { emoji: "🎉", cx: "-22px", cr: "-220deg", delay: "0ms" },
+  { emoji: "✨", cx: "0px", cr: "180deg", delay: "60ms" },
+  { emoji: "🎊", cx: "22px", cr: "260deg", delay: "30ms" },
+  { emoji: "⭐", cx: "-10px", cr: "-160deg", delay: "120ms" },
+  { emoji: "💫", cx: "12px", cr: "200deg", delay: "90ms" },
+];
+
+function ConfettiBurst() {
+  return (
+    <span className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+      <span className="absolute inset-0 rounded-lg animate-ring-burst" style={{ boxShadow: "0 0 0 2px var(--primary)" }} />
+      {CONFETTI_PIECES.map((p, i) => (
+        <span
+          key={i}
+          className="absolute text-base animate-confetti will-change-transform"
+          style={{
+            // @ts-expect-error custom CSS vars
+            "--cx": p.cx,
+            "--cr": p.cr,
+            animationDelay: p.delay,
+          }}
+        >
+          {p.emoji}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleIds, planStatus, scheduleUsers = [], userActiveShift }: any) {
   const initialIsAvailable = shift.availabilities?.some((a: any) => a.userId === currentUserId);
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [isLoading, setIsLoading] = useState(false);
   const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
+  const [cheering, setCheering] = useState(false);
 
   useEffect(() => {
     setIsAvailable(shift.availabilities?.some((a: any) => a.userId === currentUserId));
@@ -230,6 +270,14 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
   const userAssignment = shift.assignments?.find((a: any) => a.userId === currentUserId);
   const isConfirmed = userAssignment?.status === 'CONFIRMED';
   const isAssigned = !!userAssignment;
+
+  // User is already on a different shift in this event
+  const isOnOtherShift = !isOwner
+    && !!userActiveShift
+    && userActiveShift.id !== shift.id
+    && !isAvailable
+    && !isAssigned;
+  const otherShiftLabel = userActiveShift?.name || userActiveShift?.role?.name || "Any Role";
 
   // For visibility: if not owner, check if they can volunteer OR have already volunteered
   if (!isOwner && !canVolunteer && !isAvailable) return null;
@@ -246,6 +294,8 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
       await toggleAvailabilityAction(event.id, scheduleId, shift.id);
       if (nextState) {
         toast.success("Marked as available");
+        setCheering(true);
+        setTimeout(() => setCheering(false), 900);
       } else {
         toast.success(isAssigned ? "Withdrawn from position" : "Removed availability");
       }
@@ -281,21 +331,43 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
     <div className="relative flex items-center group/role">
       <div
         role="button"
-        onClick={!isOwner ? handleToggle : undefined}
-        className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${isConfirmed
+        onClick={!isOwner && !isOnOtherShift ? handleToggle : undefined}
+        className={`relative flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${cheering ? "animate-cheer" : ""} ${isConfirmed
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50 dark:hover:bg-emerald-950/60"
           : isAssigned
             ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/50 dark:hover:bg-blue-950/60"
             : isAvailable
               ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/50 dark:hover:bg-indigo-950/60"
-              : "bg-card text-foreground ring-1 ring-border hover:ring-ring hover:text-primary hover:shadow-sm"
-          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer ? "cursor-pointer" : "cursor-default"}`}
-        title={!canVolunteer && !isOwner ? "You do not have this role" : ""}
+              : isOnOtherShift
+                ? "bg-muted/40 text-muted-foreground ring-1 ring-dashed ring-border opacity-70"
+                : "bg-card text-foreground ring-1 ring-border hover:ring-ring hover:text-primary hover:shadow-sm"
+          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer && !isOnOtherShift ? "cursor-pointer" : "cursor-default"}`}
+        title={
+          !canVolunteer && !isOwner
+            ? "You do not have this role"
+            : isOnOtherShift
+              ? `You're already volunteering as ${otherShiftLabel} for this event`
+              : ""
+        }
       >
+        {cheering && <ConfettiBurst />}
         {!isOwner ? (
-          isConfirmed ? "Confirmed" :
-            isAssigned ? "Assigned" :
-              "Available"
+          isOnOtherShift ? (
+            <>
+              <span className="truncate max-w-[10rem]">{shift.name || shift.role?.name || "Any Role"}</span>
+              <span className="text-[10px] uppercase tracking-wide opacity-80 whitespace-nowrap">
+                · on {otherShiftLabel}
+              </span>
+            </>
+          ) : (
+            <>
+              <span>
+                {isConfirmed ? "Confirmed" : isAssigned ? "Assigned" : "Available"}
+              </span>
+              <span className="opacity-60">·</span>
+              <span className="truncate max-w-[10rem]">{shift.name || shift.role?.name || "Any Role"}</span>
+            </>
+          )
         ) : (
           isOwner && shift.assignments.length > 0 ? (
             <div className="flex items-center gap-2">

@@ -23,8 +23,8 @@ export async function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <Link href="/" className="text-xl font-bold text-primary tracking-tight flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Calendar className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12" />
+        <Link href="/" className="group text-xl font-bold text-primary tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity press-down">
+          <Calendar className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
           <span>Dourak</span>
         </Link>
       </SidebarHeader>
@@ -35,14 +35,14 @@ export async function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Home" render={<Link href="/" />}>
-                    <Home />
+                  <SidebarMenuButton tooltip="Home" render={<Link href="/" />} className="group/nav transition-all hover:translate-x-1">
+                    <Home className="transition-transform duration-300 group-hover/nav:scale-110 group-hover/nav:-rotate-6" />
                     <span>Home</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Schedules" render={<Link href="/schedules" />}>
-                    <Calendar />
+                  <SidebarMenuButton tooltip="Schedules" render={<Link href="/schedules" />} className="group/nav transition-all hover:translate-x-1">
+                    <Calendar className="transition-transform duration-300 group-hover/nav:scale-110 group-hover/nav:rotate-12" />
                     <span>Schedules</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -54,7 +54,7 @@ export async function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {session?.user ? (
           <div className="flex items-center gap-3 w-full">
-            <Avatar className="h-9 w-9">
+            <Avatar className="h-9 w-9 ring-2 ring-transparent transition-all duration-300 hover:ring-primary/40 hover:scale-105">
               <AvatarImage src={session.user.image ?? undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">
                 {session.user.name?.[0] ?? "U"}
@@ -76,10 +76,10 @@ export async function AppSidebar() {
             >
               <button
                 type="submit"
-                className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors p-2 rounded-md hover:bg-sidebar-accent"
+                className="group/out text-sidebar-foreground/60 hover:text-sidebar-foreground transition-all p-2 rounded-md hover:bg-sidebar-accent press-down"
                 title="Sign out"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4 transition-transform duration-300 group-hover/out:translate-x-0.5" />
               </button>
             </form>
           </div>
