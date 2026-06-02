@@ -7,6 +7,8 @@ import { AdminManager } from "@/components/admin-manager";
 import { DeleteScheduleButton } from "@/components/delete-schedule-button";
 import { SyncScheduleButton } from "@/components/sync-schedule-button";
 
+export const maxDuration = 60;
+
 export default async function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const { id } = await params;

@@ -245,13 +245,13 @@ export async function createPlanAction(prevState: any, formData: FormData) {
 
     // Fetch events FIRST before creating anything in DB
     console.log(
-      `Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`
+      `Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`,
     );
     const googleEvents = await listEvents(
       session.user.id,
       schedule.googleCalendarId,
       startDate,
-      endDate
+      endDate,
     );
     console.log(`Fetched ${googleEvents.length} events from Google`);
 
@@ -296,9 +296,9 @@ export async function createPlanAction(prevState: any, formData: FormData) {
           ...new Set(
             eventsToCreate
               .map(
-                (e: { recurringEventId: string | null }) => e.recurringEventId
+                (e: { recurringEventId: string | null }) => e.recurringEventId,
               )
-              .filter((id: string | null): id is string => !!id)
+              .filter((id: string | null): id is string => !!id),
           ),
         ] as string[];
 
@@ -325,7 +325,7 @@ export async function createPlanAction(prevState: any, formData: FormData) {
           if (event.recurringEventId) {
             const eventTemplates = templates.filter(
               (t: { recurringEventId: string }) =>
-                t.recurringEventId === event.recurringEventId
+                t.recurringEventId === event.recurringEventId,
             );
             if (eventTemplates.length > 0) {
               hasTemplates = true;
@@ -490,7 +490,7 @@ export async function addShiftAction(formData: FormData) {
 
       if (shiftsWithInvalidUsers.length > 0) {
         throw new Error(
-          "Cannot convert Any Role position to this role because some currently available users do not have this role."
+          "Cannot convert Any Role position to this role because some currently available users do not have this role.",
         );
       }
 
@@ -519,7 +519,7 @@ export async function addShiftAction(formData: FormData) {
       // We are trying to add an Any Role position, but specific roles exist.
       // This direction is still blocked.
       throw new Error(
-        "Cannot add an Any Role position because specific roles already exist for this event series."
+        "Cannot add an Any Role position because specific roles already exist for this event series.",
       );
     }
   }
@@ -534,12 +534,12 @@ export async function addShiftAction(formData: FormData) {
   });
 
   const existingEventIds = new Set(
-    existingShifts.map((s: { calendarEventId: string }) => s.calendarEventId)
+    existingShifts.map((s: { calendarEventId: string }) => s.calendarEventId),
   );
 
   // 4. Filter out events that already have the role
   const eventsToCreateFor = targetEventIds.filter(
-    (id) => !existingEventIds.has(id)
+    (id) => !existingEventIds.has(id),
   );
 
   if (eventsToCreateFor.length > 0) {
@@ -635,10 +635,10 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
     });
 
     const eventIdsWithShifts = new Set(
-      eventsWithShifts.map((s) => s.calendarEventId)
+      eventsWithShifts.map((s) => s.calendarEventId),
     );
     const eventsWithoutShifts = siblingEventIds.filter(
-      (id) => !eventIdsWithShifts.has(id)
+      (id) => !eventIdsWithShifts.has(id),
     );
 
     if (eventsWithoutShifts.length > 0) {
@@ -689,7 +689,7 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
 export async function updateShiftAction(
   shiftId: string,
   scheduleId: string,
-  data: { name?: string; needed?: number }
+  data: { name?: string; needed?: number },
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -768,7 +768,7 @@ export async function updateShiftAction(
 export async function updatePlanStatusAction(
   planId: string,
   scheduleId: string,
-  status: "DRAFT" | "RECRUITMENT" | "SCHEDULED" | "ARCHIVED"
+  status: "DRAFT" | "RECRUITMENT" | "SCHEDULED" | "ARCHIVED",
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -790,7 +790,7 @@ export async function updatePlanStatusAction(
 
 export async function sendScheduleNotificationsAction(
   planId: string,
-  scheduleId: string
+  scheduleId: string,
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -907,7 +907,7 @@ export async function syncScheduleEventsAction(scheduleId: string) {
       session.user.id,
       schedule.googleCalendarId,
       plan.startDate,
-      plan.endDate
+      plan.endDate,
     );
 
     // 3. Fetch existing events from DB
@@ -923,7 +923,7 @@ export async function syncScheduleEventsAction(scheduleId: string) {
 
     // 5. Identify events to remove
     const eventsToRemove = dbEvents.filter(
-      (e) => !googleEventIds.has(e.googleEventId)
+      (e) => !googleEventIds.has(e.googleEventId),
     );
 
     // 6. Remove events
@@ -955,7 +955,7 @@ export async function syncScheduleEventsAction(scheduleId: string) {
         ...new Set(
           eventsToCreate
             .map((e: { recurringEventId: string | null }) => e.recurringEventId)
-            .filter((id: string | null): id is string => !!id)
+            .filter((id: string | null): id is string => !!id),
         ),
       ] as string[];
 
@@ -985,7 +985,7 @@ export async function syncScheduleEventsAction(scheduleId: string) {
         if (event.recurringEventId) {
           const eventTemplates = templates.filter(
             (t: { recurringEventId: string }) =>
-              t.recurringEventId === event.recurringEventId
+              t.recurringEventId === event.recurringEventId,
           );
           if (eventTemplates.length > 0) {
             hasTemplates = true;

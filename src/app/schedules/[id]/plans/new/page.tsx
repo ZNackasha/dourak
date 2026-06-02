@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
 import { CreatePlanForm } from "@/components/create-plan-form";
 
+export const maxDuration = 60;
+
 export default async function NewPlanPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return redirect("/api/auth/signin");

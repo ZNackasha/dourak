@@ -10,7 +10,7 @@ const datasourceUrl =
 
 if (!datasourceUrl) {
   throw new Error(
-    "Set DATABASE_URL or POSTGRES_PRISMA_URL so Prisma can connect to Postgres."
+    "Set DATABASE_URL or POSTGRES_PRISMA_URL so Prisma can connect to Postgres.",
   );
 }
 
@@ -25,6 +25,9 @@ const pool =
   globalForPrisma.pgPool ??
   new Pool({
     connectionString: datasourceUrl,
+    // Serverless: each lambda instance only needs a single connection; rely on
+    // pgBouncer (POSTGRES_PRISMA_URL on port 6543) for real pooling.
+    max: process.env.NODE_ENV === "production" ? 1 : 10,
   });
 
 const adapter = new PrismaPg(pool);
