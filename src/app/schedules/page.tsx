@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/prisma";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function SchedulesPage() {
   const session = await auth();
@@ -18,12 +19,9 @@ export default async function SchedulesPage() {
           <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Schedules</h1>
           <p className="mt-1 text-zinc-500">Manage your service rotations and events.</p>
         </div>
-        <Link
-          href="/schedules/new"
-          className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors"
-        >
+        <Button render={<Link href="/schedules/new" />}>
           Create New
-        </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4">

@@ -4,6 +4,7 @@ import { ScheduleView } from "@/components/schedule-view";
 import { notFound } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string; planId: string }> }) {
   const session = await auth();
@@ -74,13 +75,12 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                   : "You are viewing this plan as a volunteer."}
               </p>
             </div>
-            <Link
-              href={`/schedules/${id}/plans/${planId}/admin`}
-              className={`text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors shadow-sm w-full sm:w-auto text-center ${plan.status === 'DRAFT' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
-                }`}
+            <Button
+              className="w-full sm:w-auto"
+              render={<Link href={`/schedules/${id}/plans/${planId}/admin`} />}
             >
               Manage Plan
-            </Link>
+            </Button>
           </div>
         </div>
       )}

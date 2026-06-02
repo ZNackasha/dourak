@@ -53,7 +53,7 @@ export function AdminManager({ scheduleId, admins, ownerId }: { scheduleId: stri
               required
               className="bg-background"
             />
-            <Button type="submit">Add</Button>
+            <Button type="submit" size="sm">Add</Button>
           </form>
         </CardContent>
       )}

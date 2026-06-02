@@ -35,7 +35,7 @@ export function DeleteScheduleButton({ scheduleId }: { scheduleId: string }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger render={
-        <Button variant="destructive" size="sm" disabled={isDeleting}>
+        <Button variant="destructive" disabled={isDeleting}>
           {isDeleting ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
@@ -43,7 +43,7 @@ export function DeleteScheduleButton({ scheduleId }: { scheduleId: string }) {
           )}
           {isDeleting ? "Deleting..." : "Delete Schedule"}
         </Button>
-      }/>
+      } />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { joinRoleViaInviteAction } from "@/app/actions/role";
+import { Button } from "@/components/ui/button";
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
 	const { token } = await params;
@@ -54,9 +55,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 				</p>
 
 				<form action={joinRoleViaInviteAction.bind(null, token)}>
-					<button className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all transform hover:scale-[1.02]">
+					<Button type="submit" size="lg" className="w-full">
 						Accept Invitation
-					</button>
+					</Button>
 				</form>
 
 				<p className="mt-6 text-xs text-zinc-400">

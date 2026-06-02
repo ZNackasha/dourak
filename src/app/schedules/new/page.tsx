@@ -1,6 +1,7 @@
 import { getCalendarsAction } from "@/app/actions/schedule";
 import { connectGoogleCalendarAction } from "@/app/actions/auth";
 import { CreateScheduleForm } from "@/components/create-schedule-form";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +24,9 @@ export default async function NewSchedulePage() {
           To create a schedule, we need access to your Google Calendar to fetch events and sync shifts.
         </p>
         <form action={connectGoogleCalendarAction}>
-          <button
-            type="submit"
-            className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-indigo-700 shadow-sm transition-all hover:shadow-md"
-          >
+          <Button type="submit" size="lg">
             Grant Calendar Permission
-          </button>
+          </Button>
         </form>
       </div>
     );

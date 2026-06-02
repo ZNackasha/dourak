@@ -6,6 +6,7 @@ import { isScheduleAdmin } from "@/lib/permissions";
 import { AdminManager } from "@/components/admin-manager";
 import { DeleteScheduleButton } from "@/components/delete-schedule-button";
 import { SyncScheduleButton } from "@/components/sync-schedule-button";
+import { Button } from "@/components/ui/button";
 
 export const maxDuration = 60;
 
@@ -49,26 +50,17 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
           <p className="mt-1 text-zinc-500">Manage plans and rotations.</p>
         </div>
         {isAdmin && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2">
             <SyncScheduleButton scheduleId={id} />
-            <Link
-              href={`/schedules/${id}/users`}
-              className="bg-white text-zinc-700 border border-zinc-300 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-zinc-50 shadow-sm transition-colors"
-            >
+            <Button variant="outline" render={<Link href={`/schedules/${id}/users`} />}>
               Manage Users
-            </Link>
-            <Link
-              href={`/schedules/${id}/roles`}
-              className="bg-white text-zinc-700 border border-zinc-300 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-zinc-50 shadow-sm transition-colors"
-            >
+            </Button>
+            <Button variant="outline" render={<Link href={`/schedules/${id}/roles`} />}>
               Manage Roles
-            </Link>
-            <Link
-              href={`/schedules/${id}/plans/new`}
-              className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors"
-            >
+            </Button>
+            <Button render={<Link href={`/schedules/${id}/plans/new`} />}>
               Create New Plan
-            </Link>
+            </Button>
             <DeleteScheduleButton scheduleId={id} />
           </div>
         )}
