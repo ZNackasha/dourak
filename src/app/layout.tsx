@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Toaster } from "sonner";
+import { auth } from "@/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,28 +22,35 @@ export const metadata: Metadata = {
     "Coordinate users with Google Calendar integration",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+  const isAuthed = !!session?.user;
+
   return (
     <html lang="en" className="h-full bg-zinc-50">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full flex flex-col`}
         suppressHydrationWarning
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
-              <SidebarTrigger className="-ml-1" />
-            </header>
-            <main className="flex-1">
-              {children}
-            </main>
-          </SidebarInset>
-        </SidebarProvider>
+        {isAuthed ? (
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
+                <SidebarTrigger className="-ml-1" />
+              </header>
+              <main className="flex-1">
+                {children}
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+        ) : (
+          <main className="flex-1">{children}</main>
+        )}
         <Toaster position="top-center" richColors />
       </body>
     </html>
