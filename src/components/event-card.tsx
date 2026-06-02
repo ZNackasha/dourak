@@ -193,9 +193,12 @@ export function EventCard({
                     toast.error("Failed to update availability");
                   }
                 }}
-                className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 bg-card text-foreground ring-1 ring-border hover:ring-ring hover:text-primary hover:shadow-sm"
+                className="flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 bg-card text-foreground ring-1 ring-border hover:ring-primary/60 hover:bg-primary/5 hover:text-primary cursor-pointer"
               >
-                Available
+                <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                <span>I'm available</span>
               </button>
             )}
           </div>
@@ -251,6 +254,51 @@ function ConfettiBurst() {
   );
 }
 
+function VolunteerStatusIcon({
+  isConfirmed,
+  isAssigned,
+  isAvailable,
+  isOnOtherShift,
+  isFull,
+}: {
+  isConfirmed: boolean;
+  isAssigned: boolean;
+  isAvailable: boolean;
+  isOnOtherShift: boolean;
+  isFull: boolean;
+}) {
+  const baseClass = "w-3 h-3 flex-shrink-0";
+  if (isConfirmed) {
+    return (
+      <svg className={baseClass} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+        <path fillRule="evenodd" d="M16.704 5.296a1 1 0 010 1.408l-7.5 7.5a1 1 0 01-1.408 0l-3.5-3.5a1 1 0 011.408-1.408L8.5 12.092l6.796-6.796a1 1 0 011.408 0z" clipRule="evenodd" />
+      </svg>
+    );
+  }
+  if (isAssigned || isAvailable) {
+    return <span className={`${baseClass} rounded-full bg-current opacity-80`} aria-hidden />;
+  }
+  if (isOnOtherShift) {
+    return (
+      <svg className={baseClass} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+        <path fillRule="evenodd" d="M10 1a4 4 0 00-4 4v3H5a2 2 0 00-2 2v7a2 2 0 002 2h10a2 2 0 002-2v-7a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 7V5a2 2 0 10-4 0v3h4z" clipRule="evenodd" />
+      </svg>
+    );
+  }
+  if (isFull) {
+    return (
+      <svg className={baseClass} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7.5 9a1 1 0 100-2 1 1 0 000 2zm5 0a1 1 0 100-2 1 1 0 000 2zm-5.5 4a3 3 0 016 0H7z" clipRule="evenodd" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={baseClass} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleIds, planStatus, scheduleUsers = [], userActiveShift }: any) {
   const initialIsAvailable = shift.availabilities?.some((a: any) => a.userId === currentUserId);
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
@@ -278,6 +326,8 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
     && !isAvailable
     && !isAssigned;
   const otherShiftLabel = userActiveShift?.name || userActiveShift?.role?.name || "Any Role";
+  const isFull = assignedCount >= needed;
+  const roleLabel = shift.name || shift.role?.name || "Any Role";
 
   // For visibility: if not owner, check if they can volunteer OR have already volunteered
   if (!isOwner && !canVolunteer && !isAvailable) return null;
@@ -327,47 +377,58 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
     }
   };
 
+  // Volunteer (non-owner) tooltip
+  const volunteerTitle = !canVolunteer
+    ? "You do not have this role"
+    : isOnOtherShift
+      ? `You're volunteering as ${otherShiftLabel} for this event`
+      : isConfirmed
+        ? `Confirmed for ${roleLabel}`
+        : isAssigned
+          ? `Assigned to ${roleLabel} — tap to withdraw`
+          : isAvailable
+            ? `Available for ${roleLabel} — tap to remove`
+            : isFull
+              ? `${roleLabel} is full`
+              : `Volunteer for ${roleLabel}`;
+
   return (
     <div className="relative flex items-center group/role">
       <div
         role="button"
+        aria-pressed={!isOwner ? (isAvailable || isAssigned) : undefined}
         onClick={!isOwner && !isOnOtherShift ? handleToggle : undefined}
-        className={`relative flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${cheering ? "animate-cheer" : ""} ${isConfirmed
+        className={`relative flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${cheering ? "animate-cheer" : ""} ${isConfirmed
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50 dark:hover:bg-emerald-950/60"
           : isAssigned
             ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/50 dark:hover:bg-blue-950/60"
             : isAvailable
               ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/50 dark:hover:bg-indigo-950/60"
               : isOnOtherShift
-                ? "bg-muted/40 text-muted-foreground ring-1 ring-dashed ring-border opacity-70"
-                : "bg-card text-foreground ring-1 ring-border hover:ring-ring hover:text-primary hover:shadow-sm"
-          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer && !isOnOtherShift ? "cursor-pointer" : "cursor-default"}`}
-        title={
-          !canVolunteer && !isOwner
-            ? "You do not have this role"
-            : isOnOtherShift
-              ? `You're already volunteering as ${otherShiftLabel} for this event`
-              : ""
-        }
+                ? "bg-muted/40 text-muted-foreground ring-1 ring-border/60 opacity-60"
+                : isFull && !isOwner
+                  ? "bg-muted/30 text-muted-foreground ring-1 ring-border/60 opacity-70"
+                  : "bg-card text-foreground ring-1 ring-border hover:ring-primary/60 hover:text-primary hover:bg-primary/5"
+          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer && !isOnOtherShift && !isFull ? "cursor-pointer" : !isOwner && (isAvailable || isAssigned) ? "cursor-pointer" : "cursor-default"}`}
+        title={!isOwner ? volunteerTitle : ""}
       >
         {cheering && <ConfettiBurst />}
         {!isOwner ? (
-          isOnOtherShift ? (
-            <>
-              <span className="truncate max-w-[10rem]">{shift.name || shift.role?.name || "Any Role"}</span>
-              <span className="text-[10px] uppercase tracking-wide opacity-80 whitespace-nowrap">
-                · on {otherShiftLabel}
+          <>
+            <VolunteerStatusIcon
+              isConfirmed={isConfirmed}
+              isAssigned={isAssigned}
+              isAvailable={isAvailable}
+              isOnOtherShift={isOnOtherShift}
+              isFull={isFull}
+            />
+            <span className="truncate max-w-[10rem]">{roleLabel}</span>
+            {needed > 1 && (
+              <span className="text-[10px] font-semibold opacity-70 tabular-nums">
+                {assignedCount}/{needed}
               </span>
-            </>
-          ) : (
-            <>
-              <span>
-                {isConfirmed ? "Confirmed" : isAssigned ? "Assigned" : "Available"}
-              </span>
-              <span className="opacity-60">·</span>
-              <span className="truncate max-w-[10rem]">{shift.name || shift.role?.name || "Any Role"}</span>
-            </>
-          )
+            )}
+          </>
         ) : (
           isOwner && shift.assignments.length > 0 ? (
             <div className="flex items-center gap-2">
