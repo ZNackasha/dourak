@@ -392,13 +392,15 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
               ? `${roleLabel} is full`
               : `Volunteer for ${roleLabel}`;
 
+  const ownerHasAssignees = isOwner && shift.assignments.length > 0;
+
   return (
     <div className="relative flex items-center group/role">
       <div
         role="button"
         aria-pressed={!isOwner ? (isAvailable || isAssigned) : undefined}
         onClick={!isOwner && !isOnOtherShift ? handleToggle : undefined}
-        className={`relative flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${cheering ? "animate-cheer" : ""} ${isConfirmed
+        className={`relative flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 ${ownerHasAssignees ? "rounded-lg" : "rounded-full"} text-xs sm:text-sm font-medium transition-all duration-200 ${cheering ? "animate-cheer" : ""} ${isConfirmed
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50 dark:hover:bg-emerald-950/60"
           : isAssigned
             ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/50 dark:hover:bg-blue-950/60"
@@ -430,47 +432,74 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
             )}
           </>
         ) : (
-          isOwner && shift.assignments.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {shift.assignments.map((assignment: any) => (
-                <div key={assignment.id} className="flex items-center gap-1 bg-background/60 dark:bg-background/30 px-1.5 py-0.5 rounded border border-border/60">
-                  <span>{assignment.name || assignment.email || assignment.user?.email}</span>
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${assignment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-400'}`}
-                    title={assignment.status}
-                  />
-                  {assignment.status === 'PENDING' && (
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          await confirmAssignmentAction(assignment.id, scheduleId);
-                          toast.success("Confirmed");
-                        } catch { toast.error("Failed"); }
-                      }}
-                      className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200 font-bold px-1 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 rounded"
-                    >✓</button>
-                  )}
-                  {assignment.status === 'CONFIRMED' && (
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          await unconfirmAssignmentAction(assignment.id, scheduleId);
-                          toast.success("Unconfirmed");
-                        } catch { toast.error("Failed"); }
-                      }}
-                      className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 font-bold px-1 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded"
-                    >↺</button>
-                  )}
-                </div>
-              ))}
-              <span className="flex items-center">
+          ownerHasAssignees ? (
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <span className="font-semibold text-foreground/90 truncate max-w-[8rem]">
                 {shift.name || shift.role?.name || "Any Role"}
-                <span className="ml-1 text-[10px] opacity-70">
-                  ({assignedCount}/{needed})
-                </span>
               </span>
+              <span
+                className={`text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full ${assignedCount >= needed
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
+                  : "bg-background/70 text-muted-foreground border border-border/60"
+                  }`}
+              >
+                {assignedCount}/{needed}
+              </span>
+              <span className="w-px h-4 bg-border/70 mx-0.5" aria-hidden />
+              <div className="flex items-center gap-1 flex-wrap">
+                {shift.assignments.map((assignment: any) => {
+                  const displayName: string = assignment.name || assignment.user?.name || assignment.email || assignment.user?.email || "?";
+                  const initial = displayName.trim().charAt(0).toUpperCase();
+                  const firstName = displayName.split(/[\s@]/)[0];
+                  const confirmed = assignment.status === "CONFIRMED";
+                  return (
+                    <div
+                      key={assignment.id}
+                      className="group/asn flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-full bg-background/70 dark:bg-background/30 hover:bg-background dark:hover:bg-background/60 transition-colors"
+                      title={`${displayName} — ${confirmed ? "Confirmed" : "Pending"}`}
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold uppercase ring-2 ${confirmed
+                          ? "ring-emerald-500/70 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
+                          : "ring-blue-400/70 bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200"
+                          }`}
+                      >
+                        {initial}
+                      </span>
+                      <span className="text-xs text-foreground/90 max-w-[7rem] truncate">{firstName}</span>
+                      {!confirmed ? (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await confirmAssignmentAction(assignment.id, scheduleId);
+                              toast.success("Confirmed");
+                            } catch { toast.error("Failed"); }
+                          }}
+                          className="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors opacity-60 group-hover/asn:opacity-100"
+                          title="Confirm"
+                        >
+                          <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 5.296a1 1 0 010 1.408l-7.5 7.5a1 1 0 01-1.408 0l-3.5-3.5a1 1 0 011.408-1.408L8.5 12.092l6.796-6.796a1 1 0 011.408 0z" clipRule="evenodd" /></svg>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await unconfirmAssignmentAction(assignment.id, scheduleId);
+                              toast.success("Unconfirmed");
+                            } catch { toast.error("Failed"); }
+                          }}
+                          className="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-amber-600 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors opacity-0 group-hover/asn:opacity-100"
+                          title="Unconfirm"
+                        >
+                          <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a7 7 0 100 14 7 7 0 000-14zm3 8H7a1 1 0 110-2h6a1 1 0 110 2z" /></svg>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <>
