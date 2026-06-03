@@ -81,12 +81,12 @@ export function ScheduleMatrix({ events, allRoles }: ScheduleMatrixProps) {
                       <span className="text-muted-foreground font-normal text-xs whitespace-nowrap leading-tight">{timeStr}</span>
                     </div>
                   </TableCell>
-                  
+
                   <TableCell className="pl-1 pr-3 py-1.5 md:px-4 md:py-3 align-top block w-1/2 md:w-auto md:table-cell border-b-0 md:border-b">
                     <span className="md:hidden text-[10px] text-muted-foreground uppercase tracking-wider font-bold block mb-0.5">Event</span>
                     <div className="text-sm leading-tight truncate text-foreground/80">{event.title}</div>
                   </TableCell>
-                  
+
                   <TableCell className="px-3 py-1.5 md:px-4 md:py-3 align-top block w-full md:w-auto md:table-cell border-t md:border-t-0 md:border-b border-border/50">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {sortedShifts.map((shift: any) => {
@@ -97,29 +97,29 @@ export function ScheduleMatrix({ events, allRoles }: ScheduleMatrixProps) {
                           return (
                             <div
                               key={shift.id}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs border bg-muted/50 text-muted-foreground hover:bg-muted transition-colors cursor-default"
+                              className="flex items-center gap-2 min-w-0 px-2 py-1.5 rounded-md text-xs border border-dashed bg-muted/40 text-muted-foreground hover:bg-muted transition-colors cursor-default"
                               title={`${roleName}: Unassigned`}
                             >
                               <div
                                 className="w-2 h-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: roleColor }}
                               />
-                              <span className="font-medium flex-shrink-0">{roleName}:</span>
-                              <span className="italic opacity-70">Unassigned</span>
+                              <span className="font-medium truncate min-w-0">{roleName}</span>
+                              <span className="italic opacity-70 ml-auto flex-shrink-0">Unassigned</span>
                             </div>
                           );
                         }
 
                         return shift.assignments.map((assignment: any) => (
-                          <div key={assignment.id} className="relative group">
+                          <div key={assignment.id} className="relative group min-w-0">
                             {/* Base Card */}
-                            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs border bg-background text-foreground shadow-sm">
+                            <div className="flex items-center gap-2 min-w-0 px-2 py-1.5 rounded-md text-xs border bg-background text-foreground shadow-sm">
                               <div
                                 className="w-2 h-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: roleColor }}
                               />
-                              <span className="font-medium flex-shrink-0">{roleName}:</span>
-                              <span className="truncate">
+                              <span className="font-medium flex-shrink-0 max-w-[40%] truncate">{roleName}:</span>
+                              <span className="truncate min-w-0">
                                 {assignment.name || assignment.user?.name || assignment.email}
                               </span>
                               <span
