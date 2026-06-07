@@ -4,86 +4,93 @@ import { ScheduleView } from "@/components/schedule-view";
 import { notFound, redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
 
-export default async function PlanAdminPage({ params }: { params: Promise<{ id: string; planId: string }> }) {
-	const session = await auth();
-	const { id, planId } = await params;
+export default async function PlanAdminPage({
+  params,
+}: {
+  params: Promise<{ id: string; planId: string }>;
+}) {
+  const session = await auth();
+  const { id, planId } = await params;
 
-	const currentUserId = session?.user?.id;
-	if (!currentUserId) return redirect("/api/auth/signin");
+  const currentUserId = session?.user?.id;
+  if (!currentUserId)
+    return redirect(
+      `/login?callbackUrl=/schedules/${id}/plans/${planId}/admin`,
+    );
 
-	const isAdmin = await isScheduleAdmin(id, currentUserId);
-	if (!isAdmin) return notFound();
+  const isAdmin = await isScheduleAdmin(id, currentUserId);
+  if (!isAdmin) return notFound();
 
-	const plan = await db.plan.findUnique({
-		where: { id: planId },
-		include: {
-			schedule: true,
-			events: {
-				orderBy: { start: "asc" },
-				include: {
-					shifts: {
-						include: {
-							assignments: {
-								include: { user: true },
-							},
-							availabilities: {
-								include: { user: true },
-							},
-							role: true,
-						},
-					},
-				},
-			},
-		},
-	});
+  const plan = await db.plan.findUnique({
+    where: { id: planId },
+    include: {
+      schedule: true,
+      events: {
+        orderBy: { start: "asc" },
+        include: {
+          shifts: {
+            include: {
+              assignments: {
+                include: { user: true },
+              },
+              availabilities: {
+                include: { user: true },
+              },
+              role: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-	if (!plan || plan.scheduleId !== id) return notFound();
+  if (!plan || plan.scheduleId !== id) return notFound();
 
-	// Fetch user's roles
-	const userRoles = await db.userRole.findMany({
-		where: { userId: currentUserId },
-		select: { roleId: true },
-	});
-	const userRoleIds = userRoles.map((ur) => ur.roleId);
+  // Fetch user's roles
+  const userRoles = await db.userRole.findMany({
+    where: { userId: currentUserId },
+    select: { roleId: true },
+  });
+  const userRoleIds = userRoles.map((ur) => ur.roleId);
 
-	// Fetch all roles for owner to assign
-	const allRoles = await db.role.findMany({
-		where: { scheduleId: id },
-		orderBy: { name: "asc" },
-	});
+  // Fetch all roles for owner to assign
+  const allRoles = await db.role.findMany({
+    where: { scheduleId: id },
+    orderBy: { name: "asc" },
+  });
 
-	// Fetch all users in the schedule for assignment
-	const scheduleUsers = await db.user.findMany({
-		where: {
-			OR: [
-				{ roles: { some: { role: { scheduleId: id } } } },
-				{ adminSchedules: { some: { scheduleId: id } } },
-				{ schedules: { some: { id: id } } } // Owner
-			]
-		},
-		select: {
-			id: true,
-			name: true,
-			email: true,
-			image: true,
-			roles: {
-				where: { role: { scheduleId: id } },
-				select: { roleId: true }
-			}
-		},
-		orderBy: { name: 'asc' }
-	});
+  // Fetch all users in the schedule for assignment
+  const scheduleUsers = await db.user.findMany({
+    where: {
+      OR: [
+        { roles: { some: { role: { scheduleId: id } } } },
+        { adminSchedules: { some: { scheduleId: id } } },
+        { schedules: { some: { id: id } } }, // Owner
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      roles: {
+        where: { role: { scheduleId: id } },
+        select: { roleId: true },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
 
-	return (
-		<ScheduleView
-			schedule={plan.schedule}
-			plan={plan}
-			events={plan.events}
-			isOwner={true}
-			userRoleIds={userRoleIds}
-			allRoles={allRoles}
-			currentUserId={currentUserId}
-			scheduleUsers={scheduleUsers}
-		/>
-	);
+  return (
+    <ScheduleView
+      schedule={plan.schedule}
+      plan={plan}
+      events={plan.events}
+      isOwner={true}
+      userRoleIds={userRoleIds}
+      allRoles={allRoles}
+      currentUserId={currentUserId}
+      scheduleUsers={scheduleUsers}
+    />
+  );
 }

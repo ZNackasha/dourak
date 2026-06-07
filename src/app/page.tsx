@@ -1,5 +1,7 @@
-import { auth, signIn } from "@/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { getCanonicalUrl } from "@/lib/site";
 import {
   Calendar,
   CalendarSync,
@@ -78,6 +80,29 @@ const stats = [
   { value: "Minutes", label: "Not hours of planning" },
 ];
 
+const faqs = [
+  {
+    q: "What is Dourak?",
+    a: "Dourak is a smart team scheduling app that syncs with your Google Calendar and automatically fills every shift\u2014balancing roles, availability, and fairness\u2014so you can schedule volunteers and staff in seconds instead of hours.",
+  },
+  {
+    q: "How does Dourak work with Google Calendar?",
+    a: "Sign in with Google, link the calendar that holds your events, and Dourak imports them instantly. There's no copy-pasting or spreadsheets\u2014your events stay in sync automatically.",
+  },
+  {
+    q: "Is Dourak free to use?",
+    a: "Yes. You can get started for free with your Google account\u2014no credit card required\u2014and set up your first schedule in under five minutes.",
+  },
+  {
+    q: "Can I invite my whole team?",
+    a: "Absolutely. Share a single invite link or sign teammates in by email, then assign roles and let the auto-scheduler do the rest.",
+  },
+  {
+    q: "How does automatic scheduling avoid double-booking?",
+    a: "Dourak's scheduling engine detects overlapping shifts and balances assignments across your team, so no one is ever booked in two places at once.",
+  },
+];
+
 export default async function Home() {
   const session = await auth();
 
@@ -85,8 +110,44 @@ export default async function Home() {
     redirect("/schedules");
   }
 
+  const siteUrl = getCanonicalUrl();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        name: "Dourak",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        url: siteUrl,
+        description:
+          "Smart team scheduling that syncs with your Google Calendar and auto-fills every shift—balancing roles, availability, and fairness.",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: faqs.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.a,
+          },
+        })),
+      },
+    ],
+  };
+
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Decorative background glow */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-500/30 via-violet-500/20 to-fuchsia-500/10 blur-3xl animate-float" />
@@ -121,43 +182,35 @@ export default async function Home() {
 
         {/* Primary CTA */}
         <div className="mt-10 flex w-full max-w-sm flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-700 delay-300 fill-mode-both">
-          <form
-            className="w-full"
-            action={async () => {
-              "use server";
-              await signIn("google", { redirectTo: "/schedules" });
-            }}
+          <Link
+            href="/login"
+            className="press-down group flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-xl hover:shadow-foreground/20 active:translate-y-0 active:scale-[0.98]"
           >
-            <button
-              type="submit"
-              className="press-down group flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-xl hover:shadow-foreground/20 active:translate-y-0 active:scale-[0.98]"
+            <svg
+              className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110"
+              viewBox="0 0 24 24"
+              fill="currentColor"
             >
-              <svg
-                className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Get started free with Google
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-          </form>
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Get started free with Google
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </Link>
           <p className="text-xs text-muted-foreground">
             No credit card required · Set up in under 5 minutes
           </p>
@@ -288,75 +341,70 @@ export default async function Home() {
           </p>
 
           <div className="relative mx-auto mt-8 max-w-sm space-y-4">
-            <form
-              action={async () => {
-                "use server";
-                await signIn("google", { redirectTo: "/schedules" });
-              }}
+            <Link
+              href="/login"
+              className="press-down group flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-xl hover:shadow-foreground/20 active:translate-y-0 active:scale-[0.98]"
             >
-              <button
-                type="submit"
-                className="press-down group flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-xl hover:shadow-foreground/20 active:translate-y-0 active:scale-[0.98]"
+              <svg
+                className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110"
+                viewBox="0 0 24 24"
+                fill="currentColor"
               >
-                <svg
-                  className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                Sign in with Google
-              </button>
-            </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-card px-2 text-muted-foreground">
-                  Or continue with email
-                </span>
-              </div>
-            </div>
-
-            <form
-              action={async (formData) => {
-                "use server";
-                await signIn("email", { email: formData.get("email") });
-              }}
-              className="space-y-3"
-            >
-              <input
-                type="email"
-                name="email"
-                placeholder="name@example.com"
-                required
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus:border-primary focus:ring-primary"
-              />
-              <button
-                type="submit"
-                className="press-down flex w-full items-center justify-center rounded-xl bg-background px-6 py-3.5 text-base font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border transition-all hover:-translate-y-0.5 hover:bg-muted active:translate-y-0"
-              >
-                Sign in with Email
-              </button>
-            </form>
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Get started free
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+            <p className="text-xs text-muted-foreground">
+              Sign in with Google or email · No credit card required
+            </p>
           </div>
+        </div>
+      </section>
+
+      {/* ===================== FAQ ===================== */}
+      <section className="mx-auto max-w-3xl px-6 pb-28">
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Frequently asked questions
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Everything you need to know before you get started.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {faqs.map((item) => (
+            <details
+              key={item.q}
+              className="group rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors open:bg-card hover:border-primary/40"
+            >
+              <summary className="flex cursor-pointer items-center justify-between gap-4 text-base font-semibold marker:content-['']">
+                {item.q}
+                <span className="text-primary transition-transform duration-300 group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {item.a}
+              </p>
+            </details>
+          ))}
         </div>
       </section>
 

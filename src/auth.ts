@@ -11,7 +11,7 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
 if (!googleClientId || !googleClientSecret) {
   console.error(
-    "Missing Google OAuth Credentials. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+    "Missing Google OAuth Credentials. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
   );
 }
 
@@ -27,6 +27,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "database",
   },
   trustHost: true,
+  pages: {
+    signIn: "/login",
+  },
   providers: [
     Google({
       clientId: googleClientId!,
@@ -120,4 +123,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 
 export const { GET, POST } = handlers;
-
