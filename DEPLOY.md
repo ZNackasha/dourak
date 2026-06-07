@@ -50,6 +50,7 @@ Expand the **"Environment Variables"** section and add the following:
 | :--------------------- | :-------------------------------------------- | :----------------------------------------------------------------- |
 | `NEXTAUTH_SECRET`      | `[Generate a random string]`                  | You can generate one with `openssl rand -base64 32`                |
 | `NEXTAUTH_URL`         | `https://your-project.vercel.app`             | Your Vercel deployment URL (add this after first deploy if needed) |
+| `NEXT_PUBLIC_SITE_URL` | `https://dourak.app`                          | Your **primary** public domain — used for SEO canonical URLs       |
 | `GOOGLE_CLIENT_ID`     | `[Your Google Client ID]`                     | From Google Cloud Console                                          |
 | `GOOGLE_CLIENT_SECRET` | `[Your Google Client Secret]`                 | From Google Cloud Console                                          |
 | `RESEND_API_KEY`       | `[Your Resend API Key]`                       | From Resend Dashboard                                              |
@@ -60,6 +61,25 @@ Expand the **"Environment Variables"** section and add the following:
 
 - Update your **Google Cloud Console** "Authorized redirect URIs" to include:
   - `https://your-project.vercel.app/api/auth/callback/google`
+
+### Multiple domains & SEO
+
+Dourak can be served under several domains at once (e.g. `dourak.app`,
+`dourak.z-soft.dev`, and the Vercel preview/production URLs). To avoid
+duplicate-content penalties, search engines must be told which domain is
+**canonical**:
+
+- Set `NEXT_PUBLIC_SITE_URL` to your single primary domain (e.g.
+  `https://dourak.app`) on **all** deployments. Every domain will then emit a
+  `<link rel="canonical">`, `sitemap.xml`, and `robots.txt` pointing at that
+  primary domain, consolidating your SEO ranking.
+- Add each domain you serve under as an **authorized redirect URI** in Google
+  Cloud Console so login works everywhere:
+  - `https://dourak.app/api/auth/callback/google`
+  - `https://dourak.z-soft.dev/api/auth/callback/google`
+  - `https://your-project.vercel.app/api/auth/callback/google`
+- If `NEXT_PUBLIC_SITE_URL` is not set, the app falls back to
+  `NEXTAUTH_URL` → Vercel URLs → `https://dourak.app`.
 
 ## Step 5: Deploy
 
@@ -85,4 +105,3 @@ Alternatively, you can add a build command in `package.json` to run migrations o
 ## Step 7: Verify
 
 Visit your Vercel URL and try to log in!
-
