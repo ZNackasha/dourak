@@ -37,9 +37,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
-          scope: "openid email profile",
+          scope:
+            "openid email profile https://www.googleapis.com/auth/calendar.readonly",
           access_type: "offline",
           prompt: "consent",
+          include_granted_scopes: "true",
         },
       },
     }),

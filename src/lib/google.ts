@@ -64,17 +64,30 @@ export async function listCalendars(userId: string) {
     `${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    },
   );
 
   if (!response.ok) {
     const errorText = await response.text();
     let errorMessage = errorText;
+    let json: any;
     try {
-      const json = JSON.parse(errorText);
+      json = JSON.parse(errorText);
       errorMessage = json.error?.message || json.error_description || errorText;
     } catch {
       // ignore JSON parse error
+    }
+    if (
+      response.status === 403 &&
+      (json?.error?.reason === "insufficientPermissions" ||
+        json?.error?.status === "PERMISSION_DENIED" ||
+        json?.error?.details?.some?.(
+          (d: any) => d?.reason === "ACCESS_TOKEN_SCOPE_INSUFFICIENT",
+        ))
+    ) {
+      throw new Error(
+        "Google Calendar access is missing required permissions. Please reconnect your Google account from the schedule setup page.",
+      );
     }
     console.error("Google Calendar API Error:", response.status, errorMessage);
     throw new Error(errorMessage);
@@ -88,7 +101,7 @@ export async function listEvents(
   userId: string,
   calendarId: string,
   start: Date,
-  end: Date
+  end: Date,
 ) {
   const accessToken = await getValidAccessToken(userId);
 
@@ -101,19 +114,37 @@ export async function listEvents(
 
   const response = await fetch(
     `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(
-      calendarId
+      calendarId,
     )}/events?${params}`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    },
   );
 
   if (!response.ok) {
     const errorText = await response.text();
+    let json: any;
+    try {
+      json = JSON.parse(errorText);
+    } catch {
+      // ignore JSON parse error
+    }
+    if (
+      response.status === 403 &&
+      (json?.error?.reason === "insufficientPermissions" ||
+        json?.error?.status === "PERMISSION_DENIED" ||
+        json?.error?.details?.some?.(
+          (d: any) => d?.reason === "ACCESS_TOKEN_SCOPE_INSUFFICIENT",
+        ))
+    ) {
+      throw new Error(
+        "Google Calendar access is missing required permissions. Please reconnect your Google account from the schedule setup page.",
+      );
+    }
     console.error(
       "Google Calendar API Error (listEvents):",
       response.status,
-      errorText
+      errorText,
     );
     throw new Error(`Failed to fetch events: ${response.status} ${errorText}`);
   }
