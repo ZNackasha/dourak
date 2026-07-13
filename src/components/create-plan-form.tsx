@@ -53,80 +53,83 @@ export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
   }, [state, router, scheduleId]);
 
   return (
-    <form
-      action={(formData) => {
-        formAction(formData);
-      }}
-      className="space-y-6"
-    >
-      <input type="hidden" name="scheduleId" value={scheduleId} />
-
-      {state?.message && state.error && (
+    <div className="space-y-6">
+      {state?.message && state.error && needsReconnect && (
         <Alert variant="destructive">
           <AlertTitle>{state.message}</AlertTitle>
           <AlertDescription>
             <div className="space-y-3">
               <p>{state.error}</p>
-              {needsReconnect && (
-                <form action={reconnectGoogleCalendarAction}>
-                  <input
-                    type="hidden"
-                    name="callbackUrl"
-                    value={`/schedules/${scheduleId}/plans/new`}
-                  />
-                  <Button type="submit" variant="outline" size="sm">
-                    Reconnect Google Calendar
-                  </Button>
-                </form>
-              )}
+              <form action={reconnectGoogleCalendarAction}>
+                <input
+                  type="hidden"
+                  name="callbackUrl"
+                  value={`/schedules/${scheduleId}/plans/new`}
+                />
+                <Button type="submit" variant="outline" size="sm">
+                  Reconnect Google Calendar
+                </Button>
+              </form>
             </div>
           </AlertDescription>
         </Alert>
       )}
 
-      {state?.message && !state.error && !state.success && (
-        <Alert>
-          <AlertTitle>{state.message}</AlertTitle>
-        </Alert>
-      )}
+      <form
+        action={(formData) => {
+          formAction(formData);
+        }}
+        className="space-y-6"
+      >
+        <input type="hidden" name="scheduleId" value={scheduleId} />
 
-      <div className="space-y-3">
-        <Label htmlFor="name">Plan Name</Label>
-        <Input
-          type="text"
-          name="name"
-          id="name"
-          required
-          placeholder="e.g. December 2025"
-        />
-      </div>
+        {state?.message && state.error && !needsReconnect && (
+          <Alert variant="destructive">
+            <AlertTitle>{state.message}</AlertTitle>
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {state?.message && !state.error && !state.success && (
+          <Alert>
+            <AlertTitle>{state.message}</AlertTitle>
+          </Alert>
+        )}
+
         <div className="space-y-3">
-          <Label htmlFor="startDate">Start Date</Label>
+          <Label htmlFor="name">Plan Name</Label>
           <Input
-            type="date"
-            name="startDate"
-            id="startDate"
+            type="text"
+            name="name"
+            id="name"
             required
+            placeholder="e.g. December 2025"
           />
         </div>
 
-        <div className="space-y-3">
-          <Label htmlFor="endDate">End Date</Label>
-          <Input
-            type="date"
-            name="endDate"
-            id="endDate"
-            required
-          />
-        </div>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="startDate">Start Date</Label>
+            <Input type="date" name="startDate" id="startDate" required />
+          </div>
 
-      <div className="pt-4 flex justify-end gap-3">
-        <Button variant="outline" render={<Link href={`/schedules/${scheduleId}`} />}>Cancel</Button>
-        <SubmitButton />
-      </div>
-    </form>
+          <div className="space-y-3">
+            <Label htmlFor="endDate">End Date</Label>
+            <Input type="date" name="endDate" id="endDate" required />
+          </div>
+        </div>
+
+        <div className="pt-4 flex justify-end gap-3">
+          <Button
+            variant="outline"
+            render={<Link href={`/schedules/${scheduleId}`} />}
+          >
+            Cancel
+          </Button>
+          <SubmitButton />
+        </div>
+
+      </form>
+    </div>
   );
 }
