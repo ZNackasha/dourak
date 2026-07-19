@@ -8,7 +8,12 @@ export default async function SchedulesPage() {
   if (!session?.user?.id) return <div>Please login</div>;
 
   const schedules = await db.schedule.findMany({
-    where: { userId: session.user.id },
+    where: {
+      OR: [
+        { userId: session.user.id },
+        { admins: { some: { userId: session.user.id } } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 

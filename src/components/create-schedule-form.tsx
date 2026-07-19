@@ -18,7 +18,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button disabled={pending} className="w-full mt-2">
+    <Button type="submit" disabled={pending} className="w-full mt-2">
       {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
       Create Schedule
     </Button>
@@ -27,6 +27,14 @@ function SubmitButton() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CreateScheduleForm({ calendars }: { calendars: any[] }) {
+  // Base UI's <SelectValue> renders the raw value unless the root is given an
+  // `items` map, so pass value -> label (calendar id -> summary) to display the
+  // calendar name instead of its (random-looking) id.
+  const calendarItems = calendars.map((cal) => ({
+    value: cal.id,
+    label: cal.summary,
+  }));
+
   return (
     <form action={createScheduleAction} className="space-y-6">
       <div className="space-y-3">
@@ -42,7 +50,12 @@ export function CreateScheduleForm({ calendars }: { calendars: any[] }) {
 
       <div className="space-y-3">
         <Label htmlFor="calendarId">Select Calendar</Label>
-        <Select name="calendarId" required defaultValue={calendars[0]?.id}>
+        <Select
+          name="calendarId"
+          items={calendarItems}
+          required
+          defaultValue={calendars[0]?.id}
+        >
           <SelectTrigger id="calendarId">
             <SelectValue placeholder="Select a calendar" />
           </SelectTrigger>

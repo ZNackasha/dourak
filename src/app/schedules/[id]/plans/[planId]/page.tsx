@@ -89,6 +89,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         plan={plan}
         events={plan.events}
         isOwner={false} // Always false in this view
+        isAdmin={isAdmin}
         userRoleIds={userRoleIds}
         allRoles={allRoles}
         currentUserId={currentUserId || ""}

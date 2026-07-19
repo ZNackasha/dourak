@@ -41,6 +41,7 @@ export function EventCard({
   event,
   scheduleId,
   isOwner,
+  isAdmin = false,
   currentUserId,
   userRoleIds = [],
   allRoles = [],
@@ -51,6 +52,7 @@ export function EventCard({
   event: any,
   scheduleId: string,
   isOwner: boolean,
+  isAdmin?: boolean,
   currentUserId: string,
   userRoleIds?: string[],
   allRoles?: any[],
@@ -72,7 +74,7 @@ export function EventCard({
   // Visibility Check
   if (!isOwner) {
     if (hasRoles) {
-      const hasMatchingRole = shifts.some((s: any) => {
+      const hasMatchingRole = isAdmin || shifts.some((s: any) => {
         const rId = s.roleId || s.role?.id;
         // Match if user has the role OR if it's an Any Role position (no role)
         return !rId || (rId && userRoleIds.includes(rId));
@@ -175,6 +177,7 @@ export function EventCard({
                 event={event}
                 scheduleId={scheduleId}
                 isOwner={isOwner}
+                isAdmin={isAdmin}
                 currentUserId={currentUserId}
                 userRoleIds={userRoleIds}
                 planStatus={planStatus}
@@ -299,7 +302,7 @@ function VolunteerStatusIcon({
   );
 }
 
-function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleIds, planStatus, scheduleUsers = [], userActiveShift }: any) {
+function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, userRoleIds, planStatus, scheduleUsers = [], userActiveShift }: any) {
   const initialIsAvailable = shift.availabilities?.some((a: any) => a.userId === currentUserId);
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [isLoading, setIsLoading] = useState(false);
@@ -311,7 +314,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, currentUserId, userRoleId
   }, [shift.availabilities, currentUserId]);
 
   const roleId = shift.roleId || shift.role?.id;
-  const canVolunteer = !roleId || userRoleIds.includes(roleId);
+  const canVolunteer = isAdmin || !roleId || userRoleIds.includes(roleId);
   const needed = shift.needed || 1;
   const assignedCount = shift.assignments.length;
 

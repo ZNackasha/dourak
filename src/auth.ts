@@ -37,10 +37,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/calendar.readonly",
-          access_type: "offline",
-          prompt: "consent",
+          // Base sign-in requests identity only — no calendar access. This lets
+          // volunteers onboard without granting any Google Calendar permission.
+          // Calendar scope is requested lazily the first time an admin needs it
+          // (see connectGoogleCalendarAction / reconnectGoogleCalendarAction),
+          // and merged onto the account via incremental authorization.
+          scope: "openid email profile",
           include_granted_scopes: "true",
         },
       },

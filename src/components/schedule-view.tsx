@@ -19,6 +19,7 @@ interface ScheduleViewProps {
   plan: any;
   events: any[];
   isOwner: boolean;
+  isAdmin?: boolean;
   userRoleIds: string[];
   allRoles: any[];
   currentUserId: string;
@@ -30,6 +31,7 @@ function DateGroup({
   events,
   schedule,
   isOwner,
+  isAdmin,
   currentUserId,
   userRoleIds,
   allRoles,
@@ -44,6 +46,7 @@ function DateGroup({
   events: any[];
   schedule: any;
   isOwner: boolean;
+  isAdmin: boolean;
   currentUserId: string;
   userRoleIds: string[];
   allRoles: any[];
@@ -61,6 +64,7 @@ function DateGroup({
   const [isExpanded, setIsExpanded] = useState(true);
 
   const eligibleEvents = events.filter((event: any) => {
+    if (isAdmin) return true;
     if (event.shifts.length === 0) return true;
     return event.shifts.some((shift: any) => {
       const rId = shift.roleId || shift.role?.id;
@@ -116,11 +120,10 @@ function DateGroup({
               );
             }}
             disabled={volunteeringDate === date}
-            className={`relative text-sm font-medium px-4 py-1.5 rounded-full transition-colors border press-down ${cheeringDate === date ? "animate-cheer" : ""} ${
-              isFullyBooked
+            className={`relative text-sm font-medium px-4 py-1.5 rounded-full transition-colors border press-down ${cheeringDate === date ? "animate-cheer" : ""} ${isFullyBooked
                 ? "text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-950/40"
                 : "text-primary border-primary/30 hover:bg-primary/10"
-            }`}
+              }`}
           >
             {cheeringDate === date && (
               <span
@@ -190,6 +193,7 @@ function DateGroup({
                 event={event}
                 scheduleId={schedule.id}
                 isOwner={isOwner}
+                isAdmin={isAdmin}
                 currentUserId={currentUserId}
                 userRoleIds={userRoleIds}
                 allRoles={allRoles}
@@ -210,6 +214,7 @@ export function ScheduleView({
   plan,
   events,
   isOwner,
+  isAdmin = false,
   userRoleIds: initialUserRoleIds,
   allRoles,
   currentUserId,
@@ -228,8 +233,10 @@ export function ScheduleView({
 
   const activeUserRoleIds = isImpersonating
     ? impersonatedRoleIds
-    : initialUserRoleIds;
-  const activeIsOwner = isImpersonating ? false : isOwner;
+    : initialUserRoleIds; const activeIsOwner = isImpersonating ? false : isOwner;
+  // Admins can volunteer for any role. While impersonating a volunteer view,
+  // the owner opts out of admin-sees-all so previews are accurate.
+  const activeIsAdmin = isImpersonating ? false : isAdmin;
 
   const toggleImpersonatedRole = (roleId: string) => {
     setImpersonatedRoleIds((prev) =>
@@ -268,7 +275,7 @@ export function ScheduleView({
         },
         cancel: {
           label: "Cancel",
-          onClick: () => {},
+          onClick: () => { },
         },
       },
     );
@@ -292,7 +299,7 @@ export function ScheduleView({
         },
         cancel: {
           label: "Cancel",
-          onClick: () => {},
+          onClick: () => { },
         },
       },
     );
@@ -354,6 +361,10 @@ export function ScheduleView({
             } else if (event.shifts.length === 0) {
               // No shifts defined, allow generic
               targetShiftId = undefined;
+              canVolunteer = true;
+            } else if (activeIsAdmin) {
+              // Admins can serve any role — fall back to the first shift.
+              targetShiftId = event.shifts[0].id;
               canVolunteer = true;
             }
           }
@@ -428,6 +439,7 @@ export function ScheduleView({
           .filter((e): e is (typeof events)[0] => e !== null);
       } else {
         visibleEvents = visibleEvents.filter((event) => {
+          if (activeIsAdmin) return true;
           const shifts = event.shifts;
           const hasRoles = shifts.some((s: any) => s.roleId);
 
@@ -586,11 +598,10 @@ export function ScheduleView({
                       disabled={
                         plan.status === "DRAFT" || plan.status === "ARCHIVED"
                       }
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        plan.status === "DRAFT" || plan.status === "ARCHIVED"
+                      className={`p-1.5 rounded-lg transition-colors ${plan.status === "DRAFT" || plan.status === "ARCHIVED"
                           ? "text-muted-foreground/50 cursor-not-allowed"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
+                        }`}
                       title="Share Plan"
                     >
                       <svg
@@ -654,11 +665,10 @@ export function ScheduleView({
 
                 <button
                   onClick={() => setIsImpersonating(!isImpersonating)}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-sm font-medium transition-all shadow-sm ${
-                    isImpersonating
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-sm font-medium transition-all shadow-sm ${isImpersonating
                       ? "bg-primary border-primary text-primary-foreground hover:bg-primary/90"
                       : "bg-card border-border text-foreground hover:bg-muted hover:border-input"
-                  }`}
+                    }`}
                 >
                   <svg
                     className="w-4 h-4"
@@ -720,11 +730,10 @@ export function ScheduleView({
                   <button
                     key={role.id}
                     onClick={() => toggleImpersonatedRole(role.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                      isSelected
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${isSelected
                         ? "bg-primary text-primary-foreground border-primary shadow-sm ring-2 ring-ring/40 ring-offset-1 ring-offset-background"
                         : "bg-card text-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-sm"
-                    }`}
+                      }`}
                   >
                     {role.name}
                     {isSelected && " ✓"}
@@ -775,6 +784,7 @@ export function ScheduleView({
                 events={dateEvents}
                 schedule={schedule}
                 isOwner={activeIsOwner}
+                isAdmin={activeIsAdmin}
                 currentUserId={currentUserId}
                 userRoleIds={activeUserRoleIds}
                 allRoles={allRoles}
