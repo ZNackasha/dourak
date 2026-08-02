@@ -97,7 +97,7 @@ model Role {
 model Schedule {
   id               String          @id @default(cuid())
   name             String
-  googleCalendarId String
+  googleCalendarId String?
   userId           String
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   plans            Plan[]
@@ -133,7 +133,7 @@ enum ScheduleStatus {
 
 model CalendarEvent {
   id               String   @id @default(cuid())
-  googleEventId    String
+  googleEventId    String?
   planId           String
   plan             Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   title            String

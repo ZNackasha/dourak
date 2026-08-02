@@ -63,14 +63,15 @@ export default async function SchedulesPage() {
             </div>
             <h3 className="text-foreground font-semibold text-lg">Let&apos;s set up your first schedule</h3>
             <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
-              A schedule connects to a Google Calendar and lets you coordinate volunteers for its events.
+              A schedule lets you coordinate volunteers for its events. Add
+              events yourself, or optionally import them from a Google Calendar.
             </p>
 
             <ol className="grid gap-3 mt-6 max-w-md mx-auto text-left">
               {[
-                { n: 1, title: "Create a schedule", desc: "Pick a Google Calendar to sync from." },
+                { n: 1, title: "Create a schedule", desc: "Name it — a Google Calendar is optional." },
                 { n: 2, title: "Add roles & users", desc: "Define what needs to be filled and invite people." },
-                { n: 3, title: "Open a plan for recruitment", desc: "Volunteers sign up for the dates that work." },
+                { n: 3, title: "Open a plan for recruitment", desc: "Add events, then volunteers sign up for the dates that work." },
               ].map((s) => (
                 <li key={s.n} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-border/60">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">

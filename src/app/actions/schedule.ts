@@ -185,13 +185,13 @@ export async function createScheduleAction(formData: FormData) {
   }
 
   const name = formData.get("name") as string;
-  const calendarId = formData.get("calendarId") as string;
+  const calendarId = (formData.get("calendarId") as string) || null;
 
-  if (!name || !calendarId) {
+  if (!name) {
     throw new Error("Missing fields");
   }
 
-  // Create Schedule
+  // Create Schedule (Google Calendar link is optional).
   const schedule = await db.schedule.create({
     data: {
       name,
@@ -202,6 +202,225 @@ export async function createScheduleAction(formData: FormData) {
 
   revalidatePath("/schedules");
   redirect(`/schedules/${schedule.id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Native event authoring (no Google required)
+// ---------------------------------------------------------------------------
+
+export async function createEventAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const planId = formData.get("planId") as string;
+  const scheduleId = formData.get("scheduleId") as string;
+  const title = (formData.get("title") as string)?.trim();
+  const startStr = formData.get("start") as string;
+  const endStr = formData.get("end") as string;
+  const needed = parseInt(formData.get("needed") as string) || 1;
+
+  if (!planId || !scheduleId || !title || !startStr || !endStr) {
+    throw new Error("Missing required fields");
+  }
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const plan = await db.plan.findFirst({
+    where: { id: planId, scheduleId },
+    select: { id: true },
+  });
+  if (!plan) throw new Error("Plan not found");
+
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+    throw new Error("Invalid start/end time");
+  }
+
+  // Create the event with a default "Any Role" shift so volunteers can sign up.
+  await db.calendarEvent.create({
+    data: {
+      planId,
+      title,
+      start,
+      end,
+      shifts: {
+        create: [{ roleId: null, needed, name: null }],
+      },
+    },
+  });
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+export async function updateEventAction(
+  eventId: string,
+  scheduleId: string,
+  data: { title?: string; start?: string; end?: string },
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const updates: { title?: string; start?: Date; end?: Date } = {};
+  if (data.title !== undefined) updates.title = data.title.trim();
+  if (data.start !== undefined) {
+    const d = new Date(data.start);
+    if (isNaN(d.getTime())) throw new Error("Invalid start time");
+    updates.start = d;
+  }
+  if (data.end !== undefined) {
+    const d = new Date(data.end);
+    if (isNaN(d.getTime())) throw new Error("Invalid end time");
+    updates.end = d;
+  }
+
+  await db.calendarEvent.update({
+    where: { id: eventId },
+    data: updates,
+  });
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+export async function deleteEventAction(eventId: string, scheduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  await db.calendarEvent.delete({ where: { id: eventId } });
+
+  revalidatePath(`/schedules/${scheduleId}`, "layout");
+}
+
+/**
+ * Optional: import events from the schedule's linked Google Calendar into a
+ * single plan's date range. Adds only events not already present (matched by
+ * googleEventId); never touches natively-created events.
+ */
+export async function importGoogleEventsAction(
+  planId: string,
+  scheduleId: string,
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { message: "Not authenticated" };
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) return { message: "Unauthorized" };
+
+  const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
+  if (!schedule) return { message: "Schedule not found" };
+  if (!schedule.googleCalendarId) {
+    return { message: "This schedule is not linked to a Google Calendar." };
+  }
+
+  const plan = await db.plan.findFirst({
+    where: { id: planId, scheduleId },
+  });
+  if (!plan) return { message: "Plan not found" };
+
+  try {
+    const googleEvents = await listEvents(
+      session.user.id,
+      schedule.googleCalendarId,
+      plan.startDate,
+      plan.endDate,
+    );
+
+    const existing = await db.calendarEvent.findMany({
+      where: { planId, googleEventId: { not: null } },
+      select: { googleEventId: true },
+    });
+    const existingIds = new Set(existing.map((e) => e.googleEventId));
+
+    const toAdd = googleEvents.filter((e: any) => !existingIds.has(e.id));
+    if (toAdd.length === 0) {
+      return { success: true, count: 0, message: "No new events to import." };
+    }
+
+    const eventsToCreate = toAdd.map((ev: any) => ({
+      planId,
+      googleEventId: ev.id as string,
+      title: ev.summary || "No Title",
+      start: new Date(ev.start.dateTime || ev.start.date),
+      end: new Date(ev.end.dateTime || ev.end.date),
+      recurringEventId: ev.recurringEventId || null,
+    }));
+
+    await db.calendarEvent.createMany({ data: eventsToCreate });
+
+    // Apply recurring shift templates, or a default generic shift.
+    const recurringIds = [
+      ...new Set(
+        eventsToCreate
+          .map((e: { recurringEventId: string | null }) => e.recurringEventId)
+          .filter((id: string | null): id is string => !!id),
+      ),
+    ] as string[];
+
+    let templates: any[] = [];
+    if (recurringIds.length > 0) {
+      templates = await db.recurringShift.findMany({
+        where: { scheduleId, recurringEventId: { in: recurringIds } },
+      });
+    }
+
+    const createdEvents = await db.calendarEvent.findMany({
+      where: { planId, googleEventId: { in: toAdd.map((e: any) => e.id) } },
+      select: { id: true, recurringEventId: true },
+    });
+
+    const shiftsToCreate: {
+      calendarEventId: string;
+      roleId: string | null;
+      needed: number;
+      name: string | null;
+    }[] = [];
+    for (const event of createdEvents) {
+      const eventTemplates = event.recurringEventId
+        ? templates.filter((t) => t.recurringEventId === event.recurringEventId)
+        : [];
+      if (eventTemplates.length > 0) {
+        for (const template of eventTemplates) {
+          shiftsToCreate.push({
+            calendarEventId: event.id,
+            roleId: template.roleId,
+            needed: template.needed,
+            name: template.name,
+          });
+        }
+      } else {
+        shiftsToCreate.push({
+          calendarEventId: event.id,
+          roleId: null,
+          needed: 1,
+          name: null,
+        });
+      }
+    }
+
+    if (shiftsToCreate.length > 0) {
+      await db.shift.createMany({ data: shiftsToCreate });
+    }
+
+    revalidatePath(`/schedules/${scheduleId}`, "layout");
+    return {
+      success: true,
+      count: toAdd.length,
+      message: `Imported ${toAdd.length} event${toAdd.length === 1 ? "" : "s"}.`,
+    };
+  } catch (error) {
+    console.error("Error importing Google events:", error);
+    return {
+      message: "Failed to import events",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function createPlanAction(prevState: any, formData: FormData) {
@@ -231,133 +450,23 @@ export async function createPlanAction(prevState: any, formData: FormData) {
     });
     if (!schedule) return { message: "Schedule not found" };
 
-    if (!schedule.googleCalendarId) {
-      return {
-        message:
-          "This schedule is not linked to a Google Calendar. Please configure it in the schedule settings.",
-      };
-    }
-
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
     // Set end date to end of day to be inclusive
     endDate.setHours(23, 59, 59, 999);
 
-    // Fetch events FIRST before creating anything in DB
-    console.log(
-      `Fetching Google events for schedule ${scheduleId} from ${startDate} to ${endDate}`,
-    );
-    const googleEvents = await listEvents(
-      session.user.id,
-      schedule.googleCalendarId,
-      startDate,
-      endDate,
-    );
-    console.log(`Fetched ${googleEvents.length} events from Google`);
-
-    if (googleEvents.length === 0) {
-      console.log("No events found, returning error message");
-      return {
-        message:
-          "No events found in the selected date range. Please check your dates and Google Calendar.",
-      };
-    }
-
-    // Use a transaction to ensure atomicity
-    planId = await db.$transaction(async (tx) => {
-      // Create Plan
-      const plan = await tx.plan.create({
-        data: {
-          name,
-          startDate,
-          endDate,
-          scheduleId,
-          status: "DRAFT",
-        },
-      });
-
-      // Prepare events
-      const eventsToCreate = googleEvents.map((ev: any) => ({
-        planId: plan.id,
-        googleEventId: ev.id,
-        title: ev.summary || "No Title",
-        start: new Date(ev.start.dateTime || ev.start.date),
-        end: new Date(ev.end.dateTime || ev.end.date),
-        recurringEventId: ev.recurringEventId || null,
-      }));
-
-      if (eventsToCreate.length > 0) {
-        await tx.calendarEvent.createMany({
-          data: eventsToCreate,
-        });
-
-        // Apply RecurringShift templates
-        const recurringIds = [
-          ...new Set(
-            eventsToCreate
-              .map(
-                (e: { recurringEventId: string | null }) => e.recurringEventId,
-              )
-              .filter((id: string | null): id is string => !!id),
-          ),
-        ] as string[];
-
-        let templates: any[] = [];
-        if (recurringIds.length > 0) {
-          templates = await tx.recurringShift.findMany({
-            where: {
-              scheduleId: scheduleId,
-              recurringEventId: { in: recurringIds },
-            },
-          });
-        }
-
-        const createdEvents = await tx.calendarEvent.findMany({
-          where: {
-            planId: plan.id,
-          },
-          select: { id: true, recurringEventId: true },
-        });
-
-        const shiftsToCreate = [];
-        for (const event of createdEvents) {
-          let hasTemplates = false;
-          if (event.recurringEventId) {
-            const eventTemplates = templates.filter(
-              (t: { recurringEventId: string }) =>
-                t.recurringEventId === event.recurringEventId,
-            );
-            if (eventTemplates.length > 0) {
-              hasTemplates = true;
-              for (const template of eventTemplates) {
-                shiftsToCreate.push({
-                  calendarEventId: event.id,
-                  roleId: template.roleId,
-                  needed: template.needed,
-                  name: template.name,
-                });
-              }
-            }
-          }
-
-          if (!hasTemplates) {
-            shiftsToCreate.push({
-              calendarEventId: event.id,
-              roleId: null,
-              needed: 1,
-              name: null,
-            });
-          }
-        }
-
-        if (shiftsToCreate.length > 0) {
-          await tx.shift.createMany({
-            data: shiftsToCreate,
-          });
-        }
-      }
-      return plan.id;
+    // Create an empty plan. Events are added natively (createEventAction) or
+    // imported from a linked Google Calendar (importGoogleEventsAction).
+    const plan = await db.plan.create({
+      data: {
+        name,
+        startDate,
+        endDate,
+        scheduleId,
+        status: "DRAFT",
+      },
     });
+    planId = plan.id;
   } catch (error) {
     console.error("Error creating plan:", error);
     return {
@@ -892,6 +1001,10 @@ export async function syncScheduleEventsAction(scheduleId: string) {
 
   const schedule = await db.schedule.findUnique({ where: { id: scheduleId } });
   if (!schedule) throw new Error("Schedule not found");
+  if (!schedule.googleCalendarId) {
+    throw new Error("This schedule is not linked to a Google Calendar.");
+  }
+  const googleCalendarId = schedule.googleCalendarId;
 
   // 1. Find all non-archived plans
   const plans = await db.plan.findMany({
@@ -905,14 +1018,15 @@ export async function syncScheduleEventsAction(scheduleId: string) {
     // 2. Fetch events from Google Calendar
     const googleEvents = await listEvents(
       session.user.id,
-      schedule.googleCalendarId,
+      googleCalendarId,
       plan.startDate,
       plan.endDate,
     );
 
-    // 3. Fetch existing events from DB
+    // 3. Fetch existing GOOGLE-originated events from DB. Native events
+    // (googleEventId === null) are never touched by sync.
     const dbEvents = await db.calendarEvent.findMany({
-      where: { planId: plan.id },
+      where: { planId: plan.id, googleEventId: { not: null } },
     });
 
     const dbEventMap = new Map(dbEvents.map((e) => [e.googleEventId, e]));
@@ -921,7 +1035,7 @@ export async function syncScheduleEventsAction(scheduleId: string) {
     // 4. Identify events to add
     const eventsToAdd = googleEvents.filter((e: any) => !dbEventMap.has(e.id));
 
-    // 5. Identify events to remove
+    // 5. Identify Google events that disappeared upstream
     const eventsToRemove = dbEvents.filter(
       (e) => !googleEventIds.has(e.googleEventId),
     );

@@ -15,7 +15,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { auth, signOut } from "@/auth"
+import { auth } from "@/auth"
 
 export async function AppSidebar() {
   const session = await auth()
@@ -68,12 +68,7 @@ export async function AppSidebar() {
                 {session.user.email}
               </span>
             </div>
-            <form
-              action={async () => {
-                "use server"
-                await signOut({ redirectTo: "/" })
-              }}
-            >
+            <form action="/api/auth/logout" method="post">
               <button
                 type="submit"
                 className="group/out text-sidebar-foreground/60 hover:text-sidebar-foreground transition-all p-2 rounded-md hover:bg-sidebar-accent press-down"

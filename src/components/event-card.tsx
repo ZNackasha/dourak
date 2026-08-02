@@ -16,7 +16,8 @@ import {
 import {
   addShiftAction,
   removeShiftAction,
-  updateShiftAction
+  updateShiftAction,
+  deleteEventAction
 } from "@/app/actions/schedule";
 
 const getSeriesColor = (id: string) => {
@@ -166,6 +167,31 @@ export function EventCard({
                   title="Add Available User"
                 >
                   + User
+                </button>
+                <button
+                  onClick={() => {
+                    toast(
+                      "Delete this event? This removes its shifts and assignments.",
+                      {
+                        action: {
+                          label: "Delete",
+                          onClick: async () => {
+                            try {
+                              await deleteEventAction(event.id, scheduleId);
+                              toast.success("Event deleted");
+                            } catch {
+                              toast.error("Failed to delete event");
+                            }
+                          },
+                        },
+                        cancel: { label: "Cancel", onClick: () => { } },
+                      },
+                    );
+                  }}
+                  className="text-xs font-medium text-muted-foreground hover:text-red-500 dark:hover:text-red-300 border border-dashed border-border hover:border-red-400/60 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Delete Event"
+                >
+                  Delete
                 </button>
               </>
             )}

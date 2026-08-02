@@ -1,129 +1,14 @@
-import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-import Email from "next-auth/providers/email";
-import Resend from "next-auth/providers/resend";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+import { getSessionUser, type SessionUser } from "@/lib/auth/session";
 
-import { db } from "@/lib/prisma";
+export type Session = { user: SessionUser } | null;
 
-const googleClientId = process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-if (!googleClientId || !googleClientSecret) {
-  console.error(
-    "Missing Google OAuth Credentials. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
-  );
+/**
+ * Returns the current session (or null). The shape is kept compatible with the
+ * previous NextAuth `auth()` so existing call sites (`session?.user?.id`, etc.)
+ * keep working. Authentication now runs through Keycloak via the route handlers
+ * under /api/auth/keycloak/*; see src/lib/auth/*.
+ */
+export async function auth(): Promise<Session> {
+  const user = await getSessionUser();
+  return user ? { user } : null;
 }
-
-if (!process.env.NEXTAUTH_SECRET) {
-  console.error("Missing NEXTAUTH_SECRET. This is required in production.");
-}
-
-// @ts-ignore
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(db),
-  secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: "database",
-  },
-  trustHost: true,
-  pages: {
-    signIn: "/login",
-  },
-  providers: [
-    Google({
-      clientId: googleClientId!,
-      clientSecret: googleClientSecret!,
-      allowDangerousEmailAccountLinking: true,
-      authorization: {
-        params: {
-          // Base sign-in requests identity only — no calendar access. This lets
-          // volunteers onboard without granting any Google Calendar permission.
-          // Calendar scope is requested lazily the first time an admin needs it
-          // (see connectGoogleCalendarAction / reconnectGoogleCalendarAction),
-          // and merged onto the account via incremental authorization.
-          scope: "openid email profile",
-          include_granted_scopes: "true",
-        },
-      },
-    }),
-    process.env.RESEND_API_KEY
-      ? Resend({
-          // Force the ID to be "email" so it works with existing signIn("email") calls
-          id: "email",
-          name: "Email",
-          apiKey: process.env.RESEND_API_KEY,
-          from: process.env.EMAIL_FROM,
-        })
-      : Email({
-          id: "email",
-          name: "Email",
-          server: process.env.EMAIL_SERVER || "smtp://localhost:25",
-          from: process.env.EMAIL_FROM || "no-reply@example.com",
-          ...(process.env.EMAIL_SERVER
-            ? {}
-            : {
-                sendVerificationRequest: ({ url }) => {
-                  console.log("----------------------------------------------");
-                  console.log(`Login link: ${url}`);
-                  console.log("----------------------------------------------");
-                },
-              }),
-        }),
-  ],
-  callbacks: {
-    // @ts-ignore
-    signIn: async ({ user, account, profile }) => {
-      if (account && user) {
-        try {
-          const existingAccount = await db.account.findFirst({
-            where: {
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-            },
-          });
-
-          if (existingAccount) {
-            const dataToUpdate: any = {
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              scope: account.scope,
-              token_type: account.token_type,
-              id_token: account.id_token,
-            };
-
-            // Only update refresh_token if we got a new one
-            if (account.refresh_token) {
-              dataToUpdate.refresh_token = account.refresh_token;
-            }
-
-            await db.account.update({
-              where: { id: existingAccount.id },
-              data: dataToUpdate,
-            });
-          }
-        } catch (e) {
-          console.error("Error updating account on sign in", e);
-        }
-      }
-      return true;
-    },
-    // @ts-ignore
-    session: async ({ session, user }) => {
-      if (session.user) {
-        // @ts-ignore
-        session.user.id = user.id;
-      } else {
-        session.user = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        } as any;
-      }
-      return session;
-    },
-  },
-});
-
-export const { GET, POST } = handlers;

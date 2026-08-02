@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { createScheduleAction } from "@/app/actions/schedule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -25,15 +27,20 @@ function SubmitButton() {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function CreateScheduleForm({ calendars }: { calendars: any[] }) {
-  // Base UI's <SelectValue> renders the raw value unless the root is given an
-  // `items` map, so pass value -> label (calendar id -> summary) to display the
-  // calendar name instead of its (random-looking) id.
-  const calendarItems = calendars.map((cal) => ({
+type Calendar = { id: string; summary: string };
+
+export function CreateScheduleForm({
+  calendars,
+}: {
+  calendars: Calendar[] | null;
+}) {
+  const [linkGoogle, setLinkGoogle] = useState(false);
+
+  const calendarItems = (calendars ?? []).map((cal) => ({
     value: cal.id,
     label: cal.summary,
   }));
+  const canImport = !!calendars && calendars.length > 0;
 
   return (
     <form action={createScheduleAction} className="space-y-6">
@@ -46,30 +53,72 @@ export function CreateScheduleForm({ calendars }: { calendars: any[] }) {
           required
           placeholder="e.g. Sunday Service Rotation"
         />
+        <p className="text-[0.8rem] text-muted-foreground">
+          You&apos;ll add events to this schedule yourself — no calendar
+          required.
+        </p>
       </div>
 
-      <div className="space-y-3">
-        <Label htmlFor="calendarId">Select Calendar</Label>
-        <Select
-          name="calendarId"
-          items={calendarItems}
-          required
-          defaultValue={calendars[0]?.id}
-        >
-          <SelectTrigger id="calendarId">
-            <SelectValue placeholder="Select a calendar" />
-          </SelectTrigger>
-          <SelectContent>
-            {calendars.map((cal) => (
-              <SelectItem key={cal.id} value={cal.id}>
-                {cal.summary}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-[0.8rem] text-muted-foreground">
-          Events will be synced from this Google Calendar.
-        </p>
+      <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+        {canImport ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label htmlFor="linkGoogle" className="text-sm">
+                  Import from Google Calendar
+                </Label>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Optionally sync events from one of your Google calendars.
+                </p>
+              </div>
+              <Switch
+                id="linkGoogle"
+                checked={linkGoogle}
+                onCheckedChange={setLinkGoogle}
+              />
+            </div>
+
+            {linkGoogle && (
+              <div className="space-y-2 pt-1">
+                <Label htmlFor="calendarId">Google Calendar</Label>
+                <Select
+                  name="calendarId"
+                  items={calendarItems}
+                  required={linkGoogle}
+                  defaultValue={calendars?.[0]?.id}
+                >
+                  <SelectTrigger id="calendarId" className="w-full">
+                    <SelectValue placeholder="Select a calendar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(calendars ?? []).map((cal) => (
+                      <SelectItem key={cal.id} value={cal.id}>
+                        {cal.summary}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Import from Google Calendar
+              </p>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Connect Google to optionally import events later.
+              </p>
+            </div>
+            <a
+              href="/api/auth/google/connect?callbackUrl=/schedules/new"
+              className="text-sm font-medium text-primary hover:underline whitespace-nowrap"
+            >
+              Connect Google
+            </a>
+          </div>
+        )}
       </div>
 
       <SubmitButton />

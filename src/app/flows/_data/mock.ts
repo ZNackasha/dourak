@@ -22,7 +22,12 @@ export const volunteer = {
   image: null as string | null,
 };
 
-const otherVolunteers = [
+const otherVolunteers: {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+}[] = [
   { id: "user-2", name: "Alex Chen", email: "alex@example.com", image: null },
   { id: "user-3", name: "Priya Nair", email: "priya@example.com", image: null },
   {

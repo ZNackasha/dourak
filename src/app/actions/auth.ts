@@ -1,39 +1,21 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { redirect } from "next/navigation";
 
+/**
+ * Kick off the lazy, admin-only Google Calendar linking flow. This does not log
+ * the user in (Keycloak handles that) — it attaches Google calendar tokens to
+ * the current account. See /api/auth/google/connect.
+ */
 export async function connectGoogleCalendarAction() {
-  await signIn(
-    "google",
-    {
-      redirectTo: "/schedules/new",
-    },
-    {
-      scope:
-        "openid email profile https://www.googleapis.com/auth/calendar.readonly",
-      prompt: "consent select_account",
-      access_type: "offline",
-      include_granted_scopes: "true",
-    },
-  );
+  redirect("/api/auth/google/connect");
 }
 
 export async function reconnectGoogleCalendarAction(formData: FormData) {
   const callbackUrl =
     (formData.get("callbackUrl") as string) || "/schedules/new";
-
-  await signIn(
-    "google",
-    {
-      redirectTo: callbackUrl,
-    },
-    {
-      scope:
-        "openid email profile https://www.googleapis.com/auth/calendar.readonly",
-      prompt: "consent select_account",
-      access_type: "offline",
-      include_granted_scopes: "true",
-    },
+  redirect(
+    `/api/auth/google/connect?callbackUrl=${encodeURIComponent(callbackUrl)}`,
   );
 }
 

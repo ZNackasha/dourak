@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/prisma";
 import { ScheduleView } from "@/components/schedule-view";
+import { PlanEventTools } from "@/components/plan-event-tools";
 import { notFound, redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
 
@@ -82,15 +83,22 @@ export default async function PlanAdminPage({
   });
 
   return (
-    <ScheduleView
-      schedule={plan.schedule}
-      plan={plan}
-      events={plan.events}
-      isOwner={true}
-      userRoleIds={userRoleIds}
-      allRoles={allRoles}
-      currentUserId={currentUserId}
-      scheduleUsers={scheduleUsers}
-    />
+    <>
+      <PlanEventTools
+        planId={plan.id}
+        scheduleId={id}
+        canImportGoogle={!!plan.schedule.googleCalendarId}
+      />
+      <ScheduleView
+        schedule={plan.schedule}
+        plan={plan}
+        events={plan.events}
+        isOwner={true}
+        userRoleIds={userRoleIds}
+        allRoles={allRoles}
+        currentUserId={currentUserId}
+        scheduleUsers={scheduleUsers}
+      />
+    </>
   );
 }

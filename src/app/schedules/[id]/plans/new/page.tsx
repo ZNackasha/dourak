@@ -27,8 +27,8 @@ export default async function NewPlanPage({
           Create New Plan
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Set up a new rotation period. Events will be imported from the linked
-          Google Calendar.
+          Set up a new rotation period. Add events yourself afterwards, or
+          import them from a linked Google Calendar.
         </p>
       </div>
 

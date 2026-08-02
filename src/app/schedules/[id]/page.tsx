@@ -51,7 +51,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         </div>
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
-            <SyncScheduleButton scheduleId={id} />
+            {schedule.googleCalendarId && <SyncScheduleButton scheduleId={id} />}
             <Button variant="outline" render={<Link href={`/schedules/${id}/users`} />}>
               Manage Users
             </Button>

@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { reconnectGoogleCalendarAction } from "@/app/actions/auth";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -27,54 +26,24 @@ function SubmitButton() {
 export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
   const router = useRouter();
   const [state, formAction] = useActionState(createPlanAction, null);
-  const needsReconnect =
-    typeof state?.error === "string" &&
-    state.error.includes("Google Calendar access is missing required permissions");
 
   useEffect(() => {
     if (state?.success && state.planId) {
       toast.success(state.message);
-      router.push(`/schedules/${scheduleId}/plans/${state.planId}`);
+      router.push(`/schedules/${scheduleId}/plans/${state.planId}/admin`);
       return;
     }
 
-    if (state?.message) {
-      if (state.error) {
-        toast.error(state.message, {
-          description: state.error,
-          duration: 5000,
-        });
-      } else {
-        if (!state.success) {
-          toast.success(state.message);
-        }
-      }
+    if (state?.message && state.error) {
+      toast.error(state.message, {
+        description: state.error,
+        duration: 5000,
+      });
     }
   }, [state, router, scheduleId]);
 
   return (
     <div className="space-y-6">
-      {state?.message && state.error && needsReconnect && (
-        <Alert variant="destructive">
-          <AlertTitle>{state.message}</AlertTitle>
-          <AlertDescription>
-            <div className="space-y-3">
-              <p>{state.error}</p>
-              <form action={reconnectGoogleCalendarAction}>
-                <input
-                  type="hidden"
-                  name="callbackUrl"
-                  value={`/schedules/${scheduleId}/plans/new`}
-                />
-                <Button type="submit" variant="outline" size="sm">
-                  Reconnect Google Calendar
-                </Button>
-              </form>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <form
         action={(formData) => {
           formAction(formData);
@@ -83,16 +52,10 @@ export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
       >
         <input type="hidden" name="scheduleId" value={scheduleId} />
 
-        {state?.message && state.error && !needsReconnect && (
+        {state?.message && state.error && (
           <Alert variant="destructive">
             <AlertTitle>{state.message}</AlertTitle>
             <AlertDescription>{state.error}</AlertDescription>
-          </Alert>
-        )}
-
-        {state?.message && !state.error && !state.success && (
-          <Alert>
-            <AlertTitle>{state.message}</AlertTitle>
           </Alert>
         )}
 
@@ -118,6 +81,11 @@ export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
             <Input type="date" name="endDate" id="endDate" required />
           </div>
         </div>
+
+        <p className="text-[0.8rem] text-muted-foreground">
+          After creating the plan you can add events yourself, or import them
+          from a linked Google Calendar.
+        </p>
 
         <div className="pt-4 flex justify-end gap-3">
           <Button
