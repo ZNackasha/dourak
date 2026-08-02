@@ -44,10 +44,10 @@ Dourak turns a Google Calendar into a self-service volunteer scheduling system.
 | `ScheduleAdmin`  | Co-admins of a schedule (besides owner).                                                     | `scheduleId` + `userId`                                      |
 | `Plan`           | A date-range import of calendar events.                                                      | `name`, `startDate`, `endDate`, `status`                     |
 | `CalendarEvent`  | An imported Google event within a plan.                                                      | `googleEventId`, `title`, `start`, `end`, `recurringEventId` |
-| `Role`           | A servable position (e.g. Usher). Carries a public `inviteToken`.                            | `name`, `type`, `color`, `inviteToken`, `scheduleId`         |
+| `Role`           | A servable position (e.g. Usher). Carries a public `inviteToken`.                            | `name`, `color`, `inviteToken`, `scheduleId`                 |
 | `UserRole`       | Membership of a user in a role.                                                              | `type` = `required` \| `optional`                            |
-| `Shift`          | A slot for a role inside a calendar event.                                                   | `roleId`, `needed`, `name`                                   |
-| `RecurringShift` | Template of shifts auto-applied to recurring event series.                                   | `roleId`, `needed`                                           |
+| `Shift`          | A slot for a role inside a calendar event.                                                   | `roleId`, `needed`, `name`, `required`                       |
+| `RecurringShift` | Template of shifts auto-applied to recurring event series.                                   | `roleId`, `needed`, `required`                               |
 | `Availability`   | A volunteer signalling interest in a shift.                                                  | `shiftId` + `userId`                                         |
 | `Assignment`     | A volunteer placed into a shift.                                                             | `shiftId`, `userId`/`email`, `status`                        |
 
@@ -85,7 +85,7 @@ Only `CONFIRMED` assignments are written back to Google Calendar.
 
 ### Role & membership types
 
-- `Role.type` — `required` roles are prioritized by the auto-scheduler; `optional` roles are filled only if capacity remains.
+- `Shift.required` — per event: `required` shifts are prioritized by the auto-scheduler; optional shifts are filled only if capacity remains. Set when a role is added to an event.
 - `UserRole.type` — per-person: `required` means the scheduler should place them; `optional` means place them only if needed.
 
 ---
@@ -321,11 +321,11 @@ permission immediately** — the opposite of the onboarding goal.
 
 ## 8. Onboarding & Help
 
-- **Welcome Tour** ([src/components/onboarding/welcome-tour.tsx](../src/components/onboarding/welcome-tour.tsx)) —
-  role-aware walkthrough (admin: Create → Add roles → Recruit → Confirm),
-  persisted in localStorage (`dourak-onboarding-v1`).
+- **Welcome Dialog** ([src/components/onboarding/welcome-tour.tsx](../src/components/onboarding/welcome-tour.tsx)) —
+  single-screen first-run welcome (browse → volunteer → confirmed),
+  persisted in localStorage (`dourak-onboarding-v2`). Replayable from the help menu.
 - **Help Menu** ([src/components/onboarding/help-menu.tsx](../src/components/onboarding/help-menu.tsx)) —
-  "Show me around", docs, and feedback.
+  quick tour, docs, and feedback.
 
 ---
 

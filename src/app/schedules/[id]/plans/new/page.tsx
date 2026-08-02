@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { db } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
 import { CreatePlanForm } from "@/components/create-plan-form";
@@ -20,6 +21,12 @@ export default async function NewPlanPage({
   const isAdmin = await isScheduleAdmin(id, session.user.id);
   if (!isAdmin) return redirect(`/schedules/${id}`);
 
+  const schedule = await db.schedule.findUnique({
+    where: { id },
+    select: { googleCalendarId: true },
+  });
+  const isGoogleLinked = !!schedule?.googleCalendarId;
+
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -27,12 +34,13 @@ export default async function NewPlanPage({
           Create New Plan
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Set up a new rotation period. Add events yourself afterwards, or
-          import them from a linked Google Calendar.
+          {isGoogleLinked
+            ? "Set up a new rotation period. Events from the linked Google Calendar in this range are added automatically."
+            : "Set up a new rotation period. Events from your schedule calendar that fall in this range are added automatically."}
         </p>
       </div>
 
-      <CreatePlanForm scheduleId={id} />
+      <CreatePlanForm scheduleId={id} isGoogleLinked={isGoogleLinked} />
     </div>
   );
 }

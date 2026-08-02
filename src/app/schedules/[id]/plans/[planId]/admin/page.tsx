@@ -87,7 +87,7 @@ export default async function PlanAdminPage({
       <PlanEventTools
         planId={plan.id}
         scheduleId={id}
-        canImportGoogle={!!plan.schedule.googleCalendarId}
+        isGoogleLinked={!!plan.schedule.googleCalendarId}
       />
       <ScheduleView
         schedule={plan.schedule}

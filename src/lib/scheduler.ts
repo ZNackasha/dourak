@@ -5,6 +5,9 @@ export type SchedulerEvent = {
   end: Date;
   assignments: { userId: string | null; status: string }[];
   needed?: number;
+  // Whether this shift must be filled (per-shift, set when the role is added
+  // to the event). Defaults to true when omitted.
+  required?: boolean;
 };
 
 export type UserRole = {
@@ -25,7 +28,7 @@ export type ScheduleResult = {
 
 export function generateSchedule(
   events: SchedulerEvent[],
-  users: SchedulerUser[]
+  users: SchedulerUser[],
 ): ScheduleResult[] {
   // 1. Group events by day to solve smaller sub-problems
   const eventsByDay = new Map<string, SchedulerEvent[]>();
@@ -37,7 +40,7 @@ export function generateSchedule(
   for (const event of events) {
     // Check for confirmed assignments
     const confirmedAssignments = event.assignments.filter(
-      (a) => a.status === "CONFIRMED" && a.userId
+      (a) => a.status === "CONFIRMED" && a.userId,
     );
 
     // Mark confirmed users as busy
@@ -50,7 +53,7 @@ export function generateSchedule(
         // Increment load
         initialUserLoads.set(
           confirmed.userId,
-          (initialUserLoads.get(confirmed.userId) || 0) + 1
+          (initialUserLoads.get(confirmed.userId) || 0) + 1,
         );
       }
     }
@@ -73,7 +76,7 @@ export function generateSchedule(
 
   // 2. Solve each day independently (but carrying over load counts)
   const sortedDays = Array.from(eventsByDay.keys()).sort(
-    (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    (a, b) => new Date(a).getTime() - new Date(b).getTime(),
   );
 
   for (const day of sortedDays) {
@@ -82,7 +85,7 @@ export function generateSchedule(
       dayEvents,
       users,
       globalBusyMap,
-      initialUserLoads
+      initialUserLoads,
     );
 
     dayResults.forEach((r) => {
@@ -98,7 +101,7 @@ function solveDay(
   events: SchedulerEvent[],
   users: SchedulerUser[],
   externalBusyMap: Map<string, { start: Date; end: Date }[]>,
-  currentLoads: Map<string, number>
+  currentLoads: Map<string, number>,
 ): ScheduleResult[] {
   // Pre-calculate eligible users for each event
   const eventCandidates = events.map((event) => {
@@ -133,7 +136,7 @@ function solveDay(
   function backtrack(
     index: number,
     currentAssignments: ScheduleResult[],
-    localBusyMap: Map<string, { start: Date; end: Date }[]>
+    localBusyMap: Map<string, { start: Date; end: Date }[]>,
   ) {
     iterations++;
     if (iterations > MAX_ITERATIONS) return;
@@ -144,7 +147,7 @@ function solveDay(
         currentAssignments,
         currentLoads,
         users,
-        events
+        events,
       );
       if (score > bestResult.score) {
         bestResult = { assignments: [...currentAssignments], score };
@@ -196,7 +199,7 @@ function isUserBusy(
   userId: string,
   start: Date,
   end: Date,
-  busyMap: Map<string, { start: Date; end: Date }[]>
+  busyMap: Map<string, { start: Date; end: Date }[]>,
 ) {
   const times = busyMap.get(userId);
   if (!times) return false;
@@ -204,13 +207,13 @@ function isUserBusy(
     (t) =>
       (start >= t.start && start < t.end) ||
       (end > t.start && end <= t.end) ||
-      (start <= t.start && end >= t.end)
+      (start <= t.start && end >= t.end),
   );
 }
 
 function getRoleType(
   user: SchedulerUser,
-  event: SchedulerEvent
+  event: SchedulerEvent,
 ): "required" | "optional" | undefined {
   if (!event.roleId) return "optional";
   return user.roles.find((r) => r.roleId === event.roleId)?.type;
@@ -220,32 +223,22 @@ function calculateScore(
   assignments: ScheduleResult[],
   baseLoads: Map<string, number>,
   users: SchedulerUser[],
-  events: SchedulerEvent[]
+  events: SchedulerEvent[],
 ) {
   let score = 0;
-
-  // Define which roles are REQUIRED
-  const REQUIRED_ROLES = new Set([
-    "Nursery",
-    "Kids Worship",
-    "Preschool",
-    "Elementary",
-  ]);
 
   // Primary goal: maximize total assignments (more coverage is better)
   score += assignments.length * 1000000;
 
-  // Secondary goal: prioritize required roles
+  // Secondary goal: prioritize required shifts
   for (const a of assignments) {
     const event = events.find((e) => e.id === a.eventId);
     if (!event) continue;
 
-    const isRequiredEvent = event.roleId && REQUIRED_ROLES.has(event.roleId);
-
-    if (isRequiredEvent) {
-      score += 100000; // Bonus for required roles
+    if (event.required !== false) {
+      score += 100000; // Bonus for required shifts
     } else {
-      score += 10000; // Still good to fill optional roles
+      score += 10000; // Still good to fill optional shifts
     }
   }
 

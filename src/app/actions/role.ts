@@ -6,8 +6,85 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isScheduleAdmin } from "@/lib/permissions";
+import { createEmailTransport, emailFrom } from "@/lib/email";
+import { getSiteUrl } from "@/lib/site";
 
 const requiredString = z.string().min(1, "This field is required");
+
+/** Email sent when an organizer adds someone to a role. Invite-style for the
+ * first role / users without a login; a short update otherwise. */
+async function sendRoleAddedEmail({
+  email,
+  name,
+  roleName,
+  scheduleName,
+  firstRole,
+  hasLogin,
+}: {
+  email: string;
+  name: string | null;
+  roleName: string;
+  scheduleName: string | null;
+  firstRole: boolean;
+  hasLogin: boolean;
+}) {
+  const site = getSiteUrl();
+  const greeting = name ? `Hi ${name},` : "Hi,";
+  const where = scheduleName ? ` in "${scheduleName}"` : "";
+
+  const explainer = firstRole
+    ? `
+
+What that means:
+- Dourak is where your team organizes who serves at which events.
+- When sign-ups open, you'll pick the dates that work for you.
+- Once the organizer confirms you, you're on the schedule — that's it.`
+    : "";
+
+  const cta = hasLogin
+    ? `
+
+See your schedules: ${site}/schedules`
+    : `
+
+Get started by signing in with this email address (${email}):
+${site}/login
+
+You can sign in with Google, or create an account with this email and a password — either works.`;
+
+  const text = `${greeting}
+
+You've been added as a "${roleName}" volunteer${where} on Dourak.${explainer}${cta}
+
+Thanks,
+Dourak
+
+—
+Manage which emails you receive: ${site}/settings`;
+
+  const subject = firstRole
+    ? `You've been invited as ${roleName}${scheduleName ? ` — ${scheduleName}` : ""}`
+    : `Role update: ${roleName}${scheduleName ? ` — ${scheduleName}` : ""}`;
+
+  try {
+    await createEmailTransport().sendMail({
+      from: emailFrom(),
+      to: email,
+      subject,
+      text,
+    });
+
+    if (!process.env.EMAIL_SERVER) {
+      console.log("----------------------------------------------");
+      console.log(`Role-added email to ${email}:`);
+      console.log(text);
+      console.log("----------------------------------------------");
+    }
+  } catch (e) {
+    // Email failure must not block adding the user to the role.
+    console.error(`Failed to send role-added email to ${email}`, e);
+  }
+}
 
 export async function createRoleAction(formData: FormData) {
   const session = await auth();
@@ -23,7 +100,6 @@ export async function createRoleAction(formData: FormData) {
   const parsed = z
     .object({
       name: requiredString.max(64),
-      type: z.enum(["required", "optional"]).default("required"),
       description: z.string().max(280).optional(),
       color: z
         .string()
@@ -33,7 +109,6 @@ export async function createRoleAction(formData: FormData) {
     })
     .safeParse({
       name: formData.get("name"),
-      type: formData.get("type") ?? "required",
       description: formData.get("description") ?? undefined,
       color: formData.get("color") ?? undefined,
     });
@@ -68,7 +143,6 @@ export async function createRoleAction(formData: FormData) {
     await db.role.create({
       data: {
         name: parsed.data.name.trim(),
-        type: parsed.data.type,
         description: parsed.data.description?.trim(),
         color: normalizedColor,
         scheduleId,
@@ -120,7 +194,12 @@ export async function addUserToRoleAction(formData: FormData) {
   // Fetch role to get scheduleId for revalidation and permission check
   const role = await db.role.findUnique({
     where: { id: roleId },
-    select: { id: true, scheduleId: true },
+    select: {
+      id: true,
+      name: true,
+      scheduleId: true,
+      schedule: { select: { name: true } },
+    },
   });
   if (!role) throw new Error("Role not found");
 
@@ -141,6 +220,7 @@ export async function addUserToRoleAction(formData: FormData) {
     });
   }
 
+  let added = false;
   try {
     await db.userRole.create({
       data: {
@@ -149,8 +229,25 @@ export async function addUserToRoleAction(formData: FormData) {
         type,
       },
     });
+    added = true;
   } catch (error) {
     // Ignore if already exists (unique constraint)
+  }
+
+  if (added && user.emailRoleAdded !== false) {
+    // First role + login status decide how much explaining the email does.
+    const [priorRoles, logins] = await Promise.all([
+      db.userRole.count({ where: { userId: user.id, NOT: { roleId } } }),
+      db.account.count({ where: { userId: user.id, provider: "keycloak" } }),
+    ]);
+    await sendRoleAddedEmail({
+      email,
+      name: user.name,
+      roleName: role.name,
+      scheduleName: role.schedule?.name ?? null,
+      firstRole: priorRoles === 0,
+      hasLogin: logins > 0,
+    });
   }
 
   if (role.scheduleId) {
@@ -198,7 +295,6 @@ export async function updateRoleAction(formData: FormData) {
 
   const roleId = formData.get("roleId") as string;
   const name = formData.get("name") as string;
-  const type = (formData.get("type") as string) || "required";
   const color = formData.get("color") as string;
 
   if (!roleId || !name) throw new Error("Missing fields");
@@ -225,7 +321,6 @@ export async function updateRoleAction(formData: FormData) {
     where: { id: roleId },
     data: {
       name: name.trim(),
-      type,
       color: normalizedColor,
     },
   });
@@ -254,7 +349,7 @@ export async function joinRoleViaInviteAction(token: string) {
       data: {
         userId: session.user.id,
         roleId: role.id,
-        type: role.type, // Use role's default type
+        type: "required",
       },
     });
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Asterisk } from "lucide-react";
 import { toast } from "sonner";
 import {
   toggleAvailabilityAction,
@@ -19,6 +20,12 @@ import {
   updateShiftAction,
   deleteEventAction
 } from "@/app/actions/schedule";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const getSeriesColor = (id: string) => {
   const colors = [
@@ -334,6 +341,24 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
   const [isLoading, setIsLoading] = useState(false);
   const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
   const [cheering, setCheering] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  // Touch devices have no hover: close the tap-opened toolbar on outside tap.
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (itemRef.current && !itemRef.current.contains(e.target as Node)) {
+        setActionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [actionsOpen]);
 
   useEffect(() => {
     setIsAvailable(shift.availabilities?.some((a: any) => a.userId === currentUserId));
@@ -424,11 +449,11 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
   const ownerHasAssignees = isOwner && shift.assignments.length > 0;
 
   return (
-    <div className="relative flex items-center group/role">
+    <div ref={itemRef} className="relative flex items-center group/role">
       <div
         role="button"
         aria-pressed={!isOwner ? (isAvailable || isAssigned) : undefined}
-        onClick={!isOwner && !isOnOtherShift ? handleToggle : undefined}
+        onClick={isOwner ? () => setActionsOpen((o) => !o) : !isOnOtherShift ? handleToggle : undefined}
         className={`relative flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 ${ownerHasAssignees ? "rounded-lg" : "rounded-full"} text-xs sm:text-sm font-medium transition-all duration-200 ${cheering ? "animate-cheer" : ""} ${isConfirmed
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50 dark:hover:bg-emerald-950/60"
           : isAssigned
@@ -440,7 +465,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
                 : isFull && !isOwner
                   ? "bg-muted/30 text-muted-foreground ring-1 ring-border/60 opacity-70"
                   : "bg-card text-foreground ring-1 ring-border hover:ring-primary/60 hover:text-primary hover:bg-primary/5"
-          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${!isOwner && canVolunteer && !isOnOtherShift && !isFull ? "cursor-pointer" : !isOwner && (isAvailable || isAssigned) ? "cursor-pointer" : "cursor-default"}`}
+          } ${isLoading ? "opacity-70 cursor-wait" : ""} ${isOwner ? "cursor-pointer" : canVolunteer && !isOnOtherShift && !isFull ? "cursor-pointer" : (isAvailable || isAssigned) ? "cursor-pointer" : "cursor-default"}`}
         title={!isOwner ? volunteerTitle : ""}
       >
         {cheering && <ConfettiBurst />}
@@ -454,6 +479,11 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
               isFull={isFull}
             />
             <span className="truncate max-w-[10rem]">{roleLabel}</span>
+            {shift.required === false && (
+              <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-muted text-muted-foreground ring-1 ring-border/60">
+                Optional
+              </span>
+            )}
             {needed > 1 && (
               <span className="text-[10px] font-semibold opacity-70 tabular-nums">
                 {assignedCount}/{needed}
@@ -466,6 +496,11 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
               <span className="font-semibold text-foreground/90 truncate max-w-[8rem]">
                 {shift.name || shift.role?.name || "Any Role"}
               </span>
+              {shift.required === false && (
+                <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-muted text-muted-foreground ring-1 ring-border/60">
+                  Optional
+                </span>
+              )}
               <span
                 className={`text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full ${assignedCount >= needed
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
@@ -533,6 +568,11 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
           ) : (
             <>
               {shift.name || shift.role?.name || "Any Role"}
+              {shift.required === false && (
+                <span className="ml-1 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-muted text-muted-foreground ring-1 ring-border/60">
+                  Optional
+                </span>
+              )}
               {isOwner && (
                 <span className="ml-1 text-[10px] opacity-70">
                   ({assignedCount}/{needed})
@@ -550,6 +590,7 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
             scheduleId={scheduleId}
             planStatus={planStatus}
             onOpenAssignUser={() => setIsAssignUserOpen(true)}
+            open={actionsOpen}
           />
           {isAssignUserOpen && (
             <AssignVolunteerDialog
@@ -566,73 +607,108 @@ function RoleItem({ shift, event, scheduleId, isOwner, isAdmin, currentUserId, u
     </div>
   );
 }
-function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser }: any) {
+function AdminRoleActions({ shift, scheduleId, planStatus, onOpenAssignUser, open }: any) {
   return (
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-2 hidden group-hover/role:block z-10">
+    <div className={`absolute bottom-full left-1/2 -translate-x-1/2 pb-2 z-10 ${open ? "block" : "hidden group-hover/role:block"}`}>
       <div className="flex items-center bg-popover text-popover-foreground shadow-xl border border-border rounded-lg p-1 min-w-max">
-        <button
-          onClick={onOpenAssignUser}
-          className="p-1.5 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-all"
-          title="Assign User"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
-        </button>
+        <ActionTooltip label="Assign user">
+          <button
+            onClick={onOpenAssignUser}
+            className="p-1.5 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </button>
+        </ActionTooltip>
         <div className="w-px h-4 bg-border mx-0.5"></div>
-        <button
-          onClick={async () => {
-            const newName = prompt("Enter new name for this position:", shift.name || shift.role?.name || "Any Role");
-            if (newName && newName.trim() !== "") {
-              await updateShiftAction(shift.id, scheduleId, { name: newName.trim() });
-            }
-          }}
-          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all"
-          title="Rename Position"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        </button>
-        <button
-          onClick={async () => {
-            const newNeeded = prompt("Enter number of users needed:", shift.needed || 1);
-            if (newNeeded && !isNaN(parseInt(newNeeded))) {
-              await updateShiftAction(shift.id, scheduleId, { needed: parseInt(newNeeded) });
-            }
-          }}
-          className="p-1.5 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-md transition-all"
-          title="Change Needed Count"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-          </svg>
-        </button>
-        <button
-          onClick={() => {
-            toast("Are you sure you want to remove this role?", {
-              action: {
-                label: "Delete",
-                onClick: async () => {
-                  await removeShiftAction(shift.id, scheduleId);
-                  toast.success("Role removed");
-                }
-              },
-              cancel: {
-                label: "Cancel",
-                onClick: () => { }
+        <ActionTooltip label="Rename position">
+          <button
+            onClick={async () => {
+              const newName = prompt("Enter new name for this position:", shift.name || shift.role?.name || "Any Role");
+              if (newName && newName.trim() !== "") {
+                await updateShiftAction(shift.id, scheduleId, { name: newName.trim() });
               }
-            });
-          }}
-          className="p-1.5 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-all"
-          title="Remove Role"
+            }}
+            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+        </ActionTooltip>
+        <ActionTooltip label="Change needed count">
+          <button
+            onClick={async () => {
+              const newNeeded = prompt("Enter number of users needed:", shift.needed || 1);
+              if (newNeeded && !isNaN(parseInt(newNeeded))) {
+                await updateShiftAction(shift.id, scheduleId, { needed: parseInt(newNeeded) });
+              }
+            }}
+            className="p-1.5 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-md transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            </svg>
+          </button>
+        </ActionTooltip>
+        <ActionTooltip
+          label={shift.required !== false
+            ? "Required — scheduler fills this first. Tap to make optional."
+            : "Optional — filled only if people are left over. Tap to make required."}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              const makingOptional = shift.required !== false;
+              await updateShiftAction(shift.id, scheduleId, { required: !makingOptional });
+              toast.success(makingOptional ? "Marked optional — filled only if people are left over" : "Marked required — scheduler fills this first");
+            }}
+            className={`p-1.5 rounded-md transition-all ${shift.required !== false
+              ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-950/60"
+              : "text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 hover:bg-muted"}`}
+          >
+            <Asterisk className="w-4 h-4" strokeWidth={shift.required !== false ? 3 : 2} />
+          </button>
+        </ActionTooltip>
+        <ActionTooltip label="Remove role">
+          <button
+            onClick={() => {
+              toast("Are you sure you want to remove this role?", {
+                action: {
+                  label: "Delete",
+                  onClick: async () => {
+                    await removeShiftAction(shift.id, scheduleId);
+                    toast.success("Role removed");
+                  }
+                },
+                cancel: {
+                  label: "Cancel",
+                  onClick: () => { }
+                }
+              });
+            }}
+            className="p-1.5 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </ActionTooltip>
       </div>
     </div>
+  );
+}
+
+// Instant styled tooltip (native title attributes have a ~1s browser delay).
+function ActionTooltip({ label, children }: { label: string; children: React.ReactElement }) {
+  return (
+    <TooltipProvider delay={150}>
+      <Tooltip>
+        <TooltipTrigger render={children} />
+        <TooltipContent side="top">{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -785,6 +861,7 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
   const router = useRouter();
   const [isAddingPosition, setIsAddingPosition] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
+  const [required, setRequired] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -812,7 +889,7 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
           setIsAddingPosition(!isAddingPosition);
           setSelectedRole("");
         }}
-        className="text-xs font-medium text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary/40 rounded-lg px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-all"
+        className="text-xs font-medium text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary/40 rounded-lg px-3 py-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
       >
         + Position
       </button>
@@ -867,6 +944,21 @@ function AddPositionButton({ eventId, scheduleId, allRoles, existingShifts }: an
               min={1}
               className="w-full text-sm border border-input bg-background text-foreground rounded-md focus:ring-ring focus:border-ring px-2.5 py-1.5 transition-colors"
             />
+
+            <input type="hidden" name="required" value={String(required)} />
+            <label className="mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={required}
+                onChange={(e) => setRequired(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-input accent-primary"
+              />
+              Required for this event
+            </label>
+            <p className="mt-1 text-[10px] leading-4 text-muted-foreground/80">
+              The auto-scheduler fills required positions first; optional ones
+              only if people are left over.
+            </p>
 
             <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-border">
               <button

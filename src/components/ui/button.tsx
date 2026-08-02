@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -46,11 +47,20 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // When `render` swaps in a non-<button> element (e.g. a Link), Base UI needs
+  // nativeButton=false to keep semantics/accessibility correct.
+  const isNativeButton =
+    nativeButton ??
+    (!props.render ||
+      (React.isValidElement(props.render) && props.render.type === "button"))
+
   return (
     <ButtonPrimitive
       data-slot="button"
+      nativeButton={isNativeButton}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

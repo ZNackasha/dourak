@@ -28,10 +28,14 @@ async function handle(req: NextRequest) {
     });
     return NextResponse.redirect(endSessionUrl);
   } catch (err) {
-    console.error("Keycloak end-session failed, clearing local session only", err);
+    console.error(
+      "Keycloak end-session failed, clearing local session only",
+      err,
+    );
     return NextResponse.redirect(home);
   }
 }
 
 export const GET = handle;
 export const POST = handle;
+

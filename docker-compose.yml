@@ -29,6 +29,10 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HTTP_PORT: "8080"
       KC_HEALTH_ENABLED: "true"
+      # Passed through to the realm import (${env.*}) so the Google identity
+      # provider uses the same OAuth app as the calendar integration.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     ports:
       - "8080:8080"
     volumes:

@@ -37,18 +37,6 @@ export function RoleManager({ roles, scheduleId }: { roles: any[], scheduleId: s
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="type">Role Type</Label>
-                <Select name="type" defaultValue="required">
-                  <SelectTrigger id="type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="required">Required (Critical)</SelectItem>
-                    <SelectItem value="optional">Optional (Nice to have)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="color">Color Label</Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -74,11 +62,10 @@ export function RoleManager({ roles, scheduleId }: { roles: any[], scheduleId: s
             <button
               key={role.id}
               onClick={() => setSelectedRoleId(role.id)}
-              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 flex items-center justify-between group ${
-                selectedRoleId === role.id
+              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 flex items-center justify-between group ${selectedRoleId === role.id
                   ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
                   : "border-border bg-card hover:border-primary/50 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <div
@@ -165,9 +152,6 @@ function RoleDetails({ role }: { role: any }) {
               />
               <div>
                 <h2 className="text-xl font-bold">{role.name}</h2>
-                <Badge variant={role.type === 'required' ? 'default' : 'secondary'} className="mt-1">
-                  {role.type === "required" ? "Required" : "Optional"}
-                </Badge>
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>

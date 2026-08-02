@@ -109,10 +109,12 @@ export default async function RootLayout({
               <AppSidebar />
               <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur px-4">
-                  <SidebarTrigger className="-ml-1 press-down hover:animate-jelly" />
+                  {/* Desktop collapse lives in the sidebar itself; this opens the mobile sheet. */}
+                  <SidebarTrigger className="-ml-1 press-down hover:animate-jelly md:hidden" />
+                  {/* Branding lives in the sidebar on desktop; show it here only on mobile. */}
                   <Link
                     href="/"
-                    className="group flex items-center gap-2 text-lg font-bold text-primary tracking-tight hover:opacity-90 transition-opacity press-down"
+                    className="group flex items-center gap-2 text-lg font-bold text-primary tracking-tight hover:opacity-90 transition-opacity press-down md:hidden"
                   >
                     <Calendar className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                     <span className="relative after:absolute after:-bottom-0.5 after:left-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 group-hover:after:w-full">
@@ -127,7 +129,7 @@ export default async function RootLayout({
                 <main className="flex-1 animate-in fade-in duration-300">
                   {children}
                 </main>
-                <WelcomeTour role="volunteer" />
+                <WelcomeTour />
               </SidebarInset>
             </SidebarProvider>
           ) : (

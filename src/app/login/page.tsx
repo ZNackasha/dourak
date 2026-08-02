@@ -96,8 +96,8 @@ export default async function LoginPage({
         </a>
 
         <p className="text-center text-xs text-muted-foreground">
-          You&apos;ll be redirected to our secure sign-in. New here? You can
-          create an account there too.{" "}
+          You&apos;ll be redirected to our secure sign-in — use your account, or
+          continue with Google there. New here? You can register too.{" "}
           <Link href="/" className="font-medium text-primary hover:underline">
             Back home
           </Link>

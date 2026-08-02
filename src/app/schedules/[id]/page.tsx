@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { isScheduleAdmin } from "@/lib/permissions";
 import { AdminManager } from "@/components/admin-manager";
-import { DeleteScheduleButton } from "@/components/delete-schedule-button";
-import { SyncScheduleButton } from "@/components/sync-schedule-button";
+import { CalendarPreview } from "@/components/calendar-preview";
+import { ScheduleActionsMenu } from "@/components/schedule-actions-menu";
 import { Button } from "@/components/ui/button";
 
 export const maxDuration = 60;
@@ -51,17 +51,13 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         </div>
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
-            {schedule.googleCalendarId && <SyncScheduleButton scheduleId={id} />}
-            <Button variant="outline" render={<Link href={`/schedules/${id}/users`} />}>
-              Manage Users
-            </Button>
-            <Button variant="outline" render={<Link href={`/schedules/${id}/roles`} />}>
-              Manage Roles
-            </Button>
             <Button render={<Link href={`/schedules/${id}/plans/new`} />}>
               Create New Plan
             </Button>
-            <DeleteScheduleButton scheduleId={id} />
+            <ScheduleActionsMenu
+              scheduleId={id}
+              isGoogleLinked={!!schedule.googleCalendarId}
+            />
           </div>
         )}
       </div>
@@ -105,11 +101,28 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         ))}
         {schedule.plans.length === 0 && (
           <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
-            <h3 className="text-foreground font-medium">No plans found</h3>
-            <p className="text-muted-foreground text-sm mt-1">Create a new plan to get started.</p>
+            <h3 className="text-foreground font-medium">No plans yet</h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Plans are date ranges (e.g. a month) that hold your events. Create
+              one, then add events to it.
+            </p>
+            {isAdmin && (
+              <Button className="mt-4" render={<Link href={`/schedules/${id}/plans/new`} />}>
+                Create your first plan
+              </Button>
+            )}
           </div>
         )}
       </div>
+
+      {isAdmin && schedule.googleCalendarId && (
+        <div className="mt-10">
+          <h2 className="text-sm font-semibold text-foreground mb-2">
+            Calendar
+          </h2>
+          <CalendarPreview calendarId={schedule.googleCalendarId} />
+        </div>
+      )}
     </div>
   );
 }

@@ -23,7 +23,13 @@ function SubmitButton() {
   );
 }
 
-export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
+export function CreatePlanForm({
+  scheduleId,
+  isGoogleLinked = false,
+}: {
+  scheduleId: string;
+  isGoogleLinked?: boolean;
+}) {
   const router = useRouter();
   const [state, formAction] = useActionState(createPlanAction, null);
 
@@ -83,8 +89,9 @@ export function CreatePlanForm({ scheduleId }: { scheduleId: string }) {
         </div>
 
         <p className="text-[0.8rem] text-muted-foreground">
-          After creating the plan you can add events yourself, or import them
-          from a linked Google Calendar.
+          {isGoogleLinked
+            ? "Events from the linked Google Calendar in this range are added automatically. Use Sync later to pull updates."
+            : "Events from your schedule calendar that fall in this range are added automatically. You can also add more on the plan afterwards."}
         </p>
 
         <div className="pt-4 flex justify-end gap-3">

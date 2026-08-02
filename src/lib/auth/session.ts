@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { randomBytes, createHash } from "crypto";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/prisma";
 
 /**
@@ -14,6 +15,13 @@ import { db } from "@/lib/prisma";
 
 export const SESSION_COOKIE = "dourak_session";
 const SESSION_TTL_DAYS = 30;
+
+function isSessionSchemaDriftError(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+
+  // P2021: table does not exist; P2022: column does not exist.
+  return error.code === "P2021" || error.code === "P2022";
+}
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -55,10 +63,19 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const session = await db.session.findUnique({
-    where: { sessionToken: hashToken(token) },
-    include: { user: true },
-  });
+  let session: Prisma.SessionGetPayload<{ include: { user: true } }> | null;
+  try {
+    session = await db.session.findUnique({
+      where: { sessionToken: hashToken(token) },
+      include: { user: true },
+    });
+  } catch (error) {
+    if (isSessionSchemaDriftError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 
   if (!session) return null;
 
@@ -89,3 +106,4 @@ export async function destroyCurrentSession(): Promise<void> {
 
   cookieStore.delete(SESSION_COOKIE);
 }
+

@@ -18,6 +18,10 @@ model User {
   email          String?      @unique
   emailVerified  DateTime?
   image          String?
+  // Email notification opt-outs (managed by the user in /settings).
+  emailRecruitment Boolean    @default(true)
+  emailSchedule    Boolean    @default(true)
+  emailRoleAdded   Boolean    @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   accounts       Account[]
@@ -78,7 +82,6 @@ model VerificationToken {
 model Role {
   id          String   @id @default(cuid())
   name        String
-  type        String   @default("required") // "required" or "optional"
   description String?
   color       String?  @db.VarChar(12)
   inviteToken String?  @unique
@@ -86,6 +89,7 @@ model Role {
   updatedAt   DateTime @updatedAt
   shifts      Shift[]
   recurringShifts RecurringShift[]
+  scheduleEventShifts ScheduleEventShift[]
   users       UserRole[]
   
   scheduleId  String?
@@ -103,6 +107,7 @@ model Schedule {
   plans            Plan[]
   roles            Role[]
   recurringShifts  RecurringShift[]
+  scheduleEvents   ScheduleEvent[]
   admins           ScheduleAdmin[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -153,6 +158,8 @@ model Shift {
   role            Role?         @relation(fields: [roleId], references: [id], onDelete: SetNull)
   name            String?       // Optional override for the role name
   needed          Int           @default(1)
+  // Whether this role must be filled for this specific event (defaults from Role.type).
+  required        Boolean       @default(true)
   assignments     Assignment[]
   availabilities  Availability[]
 }
@@ -203,10 +210,56 @@ model RecurringShift {
   role             Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
   name             String?
   needed           Int      @default(1)
+  required         Boolean  @default(true)
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   @@unique([scheduleId, recurringEventId, roleId])
+}
+
+// Schedule-level "calendar": reusable events defined once on a schedule.
+// A plan materializes (copies) these into concrete CalendarEvents for its
+// date range at creation time. Editing these later does not affect existing
+// plans (plans are snapshots).
+model ScheduleEvent {
+  id         String   @id @default(cuid())
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  title      String
+
+  // "ONE_OFF" or "RECURRING"
+  type       String   @default("ONE_OFF")
+
+  // For ONE_OFF: the single occurrence.
+  // For RECURRING: the FIRST occurrence (its date anchors the series and its
+  // start/end times define the wall-clock time + duration of every occurrence).
+  start      DateTime?
+  end        DateTime?
+
+  // iCal RRULE string (RFC 5545) describing how a RECURRING event repeats,
+  // e.g. "RRULE:FREQ=WEEKLY;BYDAY=SU,WE;INTERVAL=1". Null for one-off events.
+  rrule      String?
+
+  // Legacy simple-weekly fields (superseded by `rrule`); kept for back-compat.
+  weekday    Int?
+  startTime  String?
+  endTime    String?
+
+  shifts     ScheduleEventShift[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ScheduleEventShift {
+  id              String        @id @default(cuid())
+  scheduleEventId String
+  scheduleEvent   ScheduleEvent @relation(fields: [scheduleEventId], references: [id], onDelete: Cascade)
+  roleId          String?
+  role            Role?         @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  name            String?
+  needed          Int           @default(1)
+  required        Boolean       @default(true)
 }
 

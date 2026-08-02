@@ -24,7 +24,7 @@ describe("Complex Schedule Scenario", () => {
     roleId: string,
     start: Date,
     end: Date,
-    index: number = 0
+    index: number = 0,
   ): SchedulerEvent => {
     const dateStr = start.toISOString().split("T")[0];
     return {
@@ -33,6 +33,10 @@ describe("Complex Schedule Scenario", () => {
       start,
       end,
       assignments: [],
+      // Per-shift required flag, derived from the role definitions above.
+      required:
+        Object.values(roles).find((r) => r.roleId === roleId)?.type ===
+        "required",
     };
   };
 
@@ -42,91 +46,91 @@ describe("Complex Schedule Scenario", () => {
       roles.nursery.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T13:00:00Z`),
-      index
+      index,
     );
   const createKidsWorshipEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.kidsWorship.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createPreschoolEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.preschool.roleId,
       new Date(`${dateStr}T12:30:00Z`),
       new Date(`${dateStr}T13:00:00Z`),
-      index
+      index,
     );
   const createElementaryEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.elementary.roleId,
       new Date(`${dateStr}T12:30:00Z`),
       new Date(`${dateStr}T13:00:00Z`),
-      index
+      index,
     );
   const createMiddleSchoolEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.middleSchool.roleId,
       new Date(`${dateStr}T12:30:00Z`),
       new Date(`${dateStr}T13:00:00Z`),
-      index
+      index,
     );
   const createWorshipLeaderEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.worshipLeader.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createVocalsEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.vocals.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createDrumsEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.drums.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createBaseGuitarEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.baseGuitar.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createElectricGuitarEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.electricGuitar.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createAcousticGuitarEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.acousticGuitar.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createKeyboardEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.keyboard.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
   const createPianoEvent = (dateStr: string, index: number = 0) =>
     createEvent(
       roles.piano.roleId,
       new Date(`${dateStr}T12:00:00Z`),
       new Date(`${dateStr}T12:30:00Z`),
-      index
+      index,
     );
 
   // Create Events
@@ -211,7 +215,7 @@ describe("Complex Schedule Scenario", () => {
       roles: [roles.nursery, roles.kidsWorship],
       availableEvents: getEventIds(
         ["2025-12-14", "2025-12-28"],
-        [roles.nursery, roles.kidsWorship]
+        [roles.nursery, roles.kidsWorship],
       ),
     },
     {
@@ -231,7 +235,7 @@ describe("Complex Schedule Scenario", () => {
           roles.elementary,
           roles.middleSchool,
           roles.vocals,
-        ]
+        ],
       ),
     },
     {
@@ -255,7 +259,7 @@ describe("Complex Schedule Scenario", () => {
       ],
       availableEvents: getEventIds(
         ["2025-12-14", "2025-12-28"],
-        [roles.nursery, roles.preschool, roles.elementary, roles.middleSchool]
+        [roles.nursery, roles.preschool, roles.elementary, roles.middleSchool],
       ),
     },
     {
@@ -278,7 +282,7 @@ describe("Complex Schedule Scenario", () => {
       roles: [roles.kidsWorship, roles.preschool, roles.middleSchool],
       availableEvents: getEventIds(
         ["2025-12-21", "2025-12-28"],
-        [roles.kidsWorship, roles.preschool, roles.middleSchool]
+        [roles.kidsWorship, roles.preschool, roles.middleSchool],
       ),
     },
     {
@@ -315,7 +319,7 @@ describe("Complex Schedule Scenario", () => {
       roles: [roles.worshipLeader, roles.keyboard, roles.vocals],
       availableEvents: getEventIds(
         ["2025-12-07", "2025-12-14", "2025-12-21", "2025-12-28"],
-        [roles.worshipLeader, roles.keyboard, roles.vocals]
+        [roles.worshipLeader, roles.keyboard, roles.vocals],
       ),
     },
     {
@@ -323,7 +327,7 @@ describe("Complex Schedule Scenario", () => {
       roles: [roles.baseGuitar],
       availableEvents: getEventIds(
         ["2025-12-07", "2025-12-14", "2025-12-21", "2025-12-28"],
-        [roles.baseGuitar]
+        [roles.baseGuitar],
       ),
     },
     { id: "Hashem Alfay", roles: [roles.acousticGuitar], availableEvents: [] },
@@ -346,7 +350,7 @@ describe("Complex Schedule Scenario", () => {
           roles.piano,
           roles.keyboard,
           roles.worshipLeader,
-        ]
+        ],
       ),
     },
     { id: "Nicole Said", roles: [roles.vocals], availableEvents: [] },
@@ -367,7 +371,7 @@ describe("Complex Schedule Scenario", () => {
     console.log("\nAssignments by Date:");
 
     const dates = Array.from(
-      new Set(events.map((s) => s.id.split("-").slice(1, 4).join("-")))
+      new Set(events.map((s) => s.id.split("-").slice(1, 4).join("-"))),
     ).sort();
 
     dates.forEach((date) => {
@@ -381,7 +385,7 @@ describe("Complex Schedule Scenario", () => {
 
         // Find role definition
         const roleDef = Object.values(roles).find(
-          (r) => r.roleId === event.roleId
+          (r) => r.roleId === event.roleId,
         );
         const isRequired = roleDef?.type === "required";
 
@@ -389,24 +393,24 @@ describe("Complex Schedule Scenario", () => {
         const candidates = users.filter(
           (u) =>
             u.roles.some((r) => r.roleId === event.roleId) &&
-            (!u.availableEvents || u.availableEvents.includes(event.id))
+            (!u.availableEvents || u.availableEvents.includes(event.id)),
         );
 
         if (assignment) {
           console.log(
-            `  ✅ ${assignment.userId} -> ${event.roleId} (${startTime}-${endTime})`
+            `  ✅ ${assignment.userId} -> ${event.roleId} (${startTime}-${endTime})`,
           );
         } else if (isRequired) {
           const reason =
             candidates.length === 0 ? "No candidates" : "Conflict/Optimization";
           console.log(
-            `  ❌ MISSING REQUIRED: ${event.roleId} (${startTime}-${endTime}) [${reason}]`
+            `  ❌ MISSING REQUIRED: ${event.roleId} (${startTime}-${endTime}) [${reason}]`,
           );
         } else {
           const reason =
             candidates.length === 0 ? "No candidates" : "Conflict/Optimization";
           console.log(
-            `  ⚪ Unfilled Optional: ${event.roleId} (${startTime}-${endTime}) [${reason}]`
+            `  ⚪ Unfilled Optional: ${event.roleId} (${startTime}-${endTime}) [${reason}]`,
           );
         }
       });
@@ -419,7 +423,7 @@ describe("Complex Schedule Scenario", () => {
     users.forEach((user) => {
       const userAssignments = results.filter((a) => a.userId === user.id);
       const userEvents = userAssignments.map(
-        (a) => events.find((s) => s.id === a.eventId)!
+        (a) => events.find((s) => s.id === a.eventId)!,
       );
 
       for (let i = 0; i < userEvents.length; i++) {

@@ -55,3 +55,4 @@ export async function GET(req: NextRequest) {
   res.cookies.set("g_callback", callbackUrl, transientCookieOptions);
   return res;
 }
+

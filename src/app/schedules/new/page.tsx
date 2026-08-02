@@ -5,7 +5,13 @@ export const dynamic = "force-dynamic";
 
 type Calendar = { id: string; summary: string };
 
-export default async function NewSchedulePage() {
+export default async function NewSchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ name?: string; mode?: string }>;
+}) {
+  const { name, mode } = await searchParams;
+
   // Google Calendar is optional. If the user hasn't linked Google (or lacks the
   // calendar scope), we simply offer native creation and a "Connect" option.
   let calendars: Calendar[] | null = null;
@@ -27,7 +33,11 @@ export default async function NewSchedulePage() {
         </p>
       </div>
       <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
-        <CreateScheduleForm calendars={calendars} />
+        <CreateScheduleForm
+          calendars={calendars}
+          initialName={name ?? ""}
+          initialMode={mode === "google" ? "google" : "build"}
+        />
       </div>
     </div>
   );

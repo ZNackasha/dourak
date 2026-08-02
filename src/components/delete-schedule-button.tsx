@@ -24,8 +24,18 @@ export function DeleteScheduleButton({ scheduleId }: { scheduleId: string }) {
     setIsDeleting(true);
     try {
       await deleteScheduleAction(scheduleId);
-      toast.success("Schedule deleted");
     } catch (error) {
+      // Next.js `redirect()` throws NEXT_REDIRECT on success — let it propagate
+      // so navigation happens instead of showing a false error.
+      if (
+        error &&
+        typeof error === "object" &&
+        "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw error;
+      }
       console.error("Failed to delete schedule:", error);
       toast.error("Failed to delete schedule");
       setIsDeleting(false);

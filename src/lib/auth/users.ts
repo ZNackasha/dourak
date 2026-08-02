@@ -2,6 +2,8 @@ import "server-only";
 
 import type { TokenSet, IdTokenClaims } from "openid-client";
 import { db } from "@/lib/prisma";
+import { createEmailTransport, emailFrom } from "@/lib/email";
+import { getSiteUrl } from "@/lib/site";
 
 /**
  * Upsert the application `User` (and a linked `keycloak` `Account`) from a
@@ -82,7 +84,53 @@ export async function upsertUserFromKeycloak(
     update: accountData,
   });
 
+  // No prior Keycloak account = this is their first-ever login.
+  if (!existingAccount && user.email) {
+    await sendWelcomeEmail(user.email, user.name);
+  }
+
   return { id: user.id };
+}
+
+/** One-time welcome email on a user's first login. Never blocks the login. */
+async function sendWelcomeEmail(email: string, name: string | null) {
+  const site = getSiteUrl();
+  const greeting = name ? `Hi ${name},` : "Hi,";
+
+  const text = `${greeting}
+
+Welcome to Dourak — your account is ready!
+
+Dourak is where your team organizes who serves at which events:
+- Organizers set up schedules and the roles that need filling.
+- When sign-ups open, you pick the dates that work for you.
+- Once the organizer confirms you, you're on the schedule.
+
+See your schedules: ${site}/schedules
+
+Thanks,
+Dourak
+
+—
+Manage which emails you receive: ${site}/settings`;
+
+  try {
+    await createEmailTransport().sendMail({
+      from: emailFrom(),
+      to: email,
+      subject: "Welcome to Dourak",
+      text,
+    });
+
+    if (!process.env.EMAIL_SERVER) {
+      console.log("----------------------------------------------");
+      console.log(`Welcome email to ${email}:`);
+      console.log(text);
+      console.log("----------------------------------------------");
+    }
+  } catch (e) {
+    console.error(`Failed to send welcome email to ${email}`, e);
+  }
 }
 
 /** Store/refresh the Google calendar tokens for an already-authenticated user. */
@@ -126,3 +174,4 @@ export async function storeGoogleCalendarAccount(
     },
   });
 }
+

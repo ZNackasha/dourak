@@ -27,7 +27,32 @@
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:3000/*"
       },
-      "defaultClientScopes": ["openid", "email", "profile", "roles", "web-origins"]
+      "defaultClientScopes": [
+        "openid",
+        "email",
+        "profile",
+        "roles",
+        "web-origins"
+      ]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "${env.GOOGLE_CLIENT_ID}",
+        "clientSecret": "${env.GOOGLE_CLIENT_SECRET}",
+        "useJwksUrl": "true",
+        "syncMode": "IMPORT",
+        "defaultScope": "openid email profile"
+      }
     }
   ],
   "users": [
@@ -55,3 +80,4 @@
     }
   ]
 }
+

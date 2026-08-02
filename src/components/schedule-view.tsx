@@ -12,6 +12,7 @@ import {
   updatePlanStatusAction,
   deletePlanAction,
   sendScheduleNotificationsAction,
+  sendRecruitmentNotificationsAction,
 } from "@/app/actions/schedule";
 
 interface ScheduleViewProps {
@@ -266,8 +267,18 @@ export function ScheduleView({
           onClick: async () => {
             try {
               await deletePlanAction(plan.id, schedule.id);
-              toast.success("Plan deleted");
             } catch (error) {
+              // Next.js `redirect()` throws NEXT_REDIRECT on success — let it
+              // propagate so navigation happens instead of a false error.
+              if (
+                error &&
+                typeof error === "object" &&
+                "digest" in error &&
+                typeof (error as { digest?: unknown }).digest === "string" &&
+                (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+              ) {
+                throw error;
+              }
               console.error("Failed to delete plan:", error);
               toast.error("Failed to delete plan");
             }
@@ -294,6 +305,38 @@ export function ScheduleView({
             } catch (error) {
               console.error("Failed to send notifications:", error);
               toast.error("Failed to send notifications");
+            }
+          },
+        },
+        cancel: {
+          label: "Cancel",
+          onClick: () => { },
+        },
+      },
+    );
+  };
+
+  const handleSendRecruitment = async () => {
+    toast(
+      "Email all volunteers in this schedule that recruitment is open for this plan?",
+      {
+        action: {
+          label: "Send",
+          onClick: async () => {
+            try {
+              const res = await sendRecruitmentNotificationsAction(
+                plan.id,
+                schedule.id,
+              );
+              const count = res?.count ?? 0;
+              toast.success(
+                count > 0
+                  ? `Recruitment email sent to ${count} volunteer${count === 1 ? "" : "s"}.`
+                  : "No volunteers to email — add people to this schedule's roles first.",
+              );
+            } catch (error) {
+              console.error("Failed to send recruitment email:", error);
+              toast.error("Failed to send recruitment email");
             }
           },
         },
@@ -619,6 +662,28 @@ export function ScheduleView({
                       </svg>
                     </button>
                   </div>
+
+                  {plan.status === "RECRUITMENT" && (
+                    <button
+                      onClick={handleSendRecruitment}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      title="Email volunteers that recruitment is open"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
+                  )}
 
                   {plan.status === "SCHEDULED" && (
                     <button

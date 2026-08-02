@@ -21,6 +21,7 @@ import { RoleManager } from "@/components/role-manager";
 import { AdminManager } from "@/components/admin-manager";
 import { UserManager } from "@/components/user-manager";
 import { CreatePlanForm } from "@/components/create-plan-form";
+import { PlanEventTools } from "@/components/plan-event-tools";
 import { ScheduleView } from "@/components/schedule-view";
 import { ScheduleMatrix } from "@/components/schedule-matrix";
 import { WelcomeTour } from "@/components/onboarding/welcome-tour";
@@ -100,8 +101,8 @@ function InviteAcceptCard() {
 				</div>
 				<Button className="w-full">Join role</Button>
 				<p className="text-[0.7rem] text-muted-foreground">
-					Volunteers only sign in with their identity — no calendar permissions
-					are ever requested.
+					Volunteers sign in via Keycloak — no Google Calendar permissions,
+					ever.
 				</p>
 			</CardContent>
 		</Card>
@@ -117,18 +118,18 @@ const PERSONAS: Persona[] = [
 			{
 				id: "admin-onboarding",
 				title: "First-run onboarding",
-				subtitle: "The welcome tour an admin sees on their first visit.",
+				subtitle: "The welcome dialog shown on first visit.",
 				icon: Sparkles,
 				steps: [
 					{
 						id: "tour",
-						title: "Admin welcome tour",
+						title: "Welcome dialog",
 						caption:
-							"Role-aware 4-step walkthrough (Create → Roles → Recruit → Confirm), persisted in localStorage. Click to replay it.",
+							"Single-screen welcome (browse → volunteer → confirmed), persisted in localStorage. Click to replay it.",
 						node: (
 							<div className="flex flex-col items-center gap-4">
 								<Button size="lg" onClick={playTour}>
-									<PlayCircle className="mr-2 h-5 w-5" /> Play admin tour
+									<PlayCircle className="mr-2 h-5 w-5" /> Play welcome dialog
 								</Button>
 								<p className="text-sm text-muted-foreground">
 									The real <code>WelcomeTour</code> dialog opens over the page.
@@ -141,14 +142,30 @@ const PERSONAS: Persona[] = [
 			{
 				id: "admin-create-schedule",
 				title: "Create a schedule",
-				subtitle: "Bind a Google Calendar to a new schedule.",
+				subtitle: "Native-first; Google Calendar import is optional.",
 				icon: CalendarPlus,
 				steps: [
 					{
-						id: "form",
-						title: "Create Schedule form",
+						id: "native",
+						title: "Create Schedule — native (no Google)",
 						caption:
-							"First point a calendar permission may be requested — listing calendars needs Google access. The creating user becomes the owner.",
+							"Just name it — no calendar required. When Google isn't linked, a subtle 'Connect Google' option is offered for optional import later. The creator becomes owner.",
+						node: (
+							<Card className="max-w-lg mx-auto">
+								<CardHeader>
+									<CardTitle>New schedule</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<CreateScheduleForm calendars={null} />
+								</CardContent>
+							</Card>
+						),
+					},
+					{
+						id: "google",
+						title: "Create Schedule — Google linked",
+						caption:
+							"If the admin has connected Google, a toggle reveals a calendar picker for optional event import. Login itself is via Keycloak — Google is only ever used for calendars.",
 						node: (
 							<Card className="max-w-lg mx-auto">
 								<CardHeader>
@@ -226,14 +243,14 @@ const PERSONAS: Persona[] = [
 			{
 				id: "admin-create-plan",
 				title: "Create a plan",
-				subtitle: "Import calendar events for a date range.",
+				subtitle: "Create an empty plan for a date range.",
 				icon: ListChecks,
 				steps: [
 					{
 						id: "plan-form",
 						title: "Create Plan form",
 						caption:
-							"Imports Google events in the chosen range and auto-applies recurring-shift templates. Scope errors trigger a reconnect flow.",
+							"Creates an empty plan — no Google needed. Add events yourself afterwards, or import them from a linked Google Calendar.",
 						node: (
 							<Card className="max-w-lg mx-auto">
 								<CardHeader>
@@ -244,6 +261,30 @@ const PERSONAS: Persona[] = [
 								</CardContent>
 							</Card>
 						),
+					},
+				],
+			},
+			{
+				id: "admin-add-events",
+				title: "Add events",
+				subtitle: "Author events natively, or import from Google.",
+				icon: CalendarPlus,
+				steps: [
+					{
+						id: "tools",
+						title: "Plan event tools",
+						caption:
+							"The tools depend on how the schedule was made. NATIVE schedules get an inline 'Add Event' calendar editor (title, start/end, volunteers needed). GOOGLE-linked schedules instead get a single 'Sync from Google' button — the two modes are mutually exclusive. Shown here: native. Click Add Event to expand the form.",
+						node: (
+							<div className="rounded-lg border bg-background pb-4">
+								<PlanEventTools
+									planId={makePlan("DRAFT").id}
+									scheduleId={schedule.id}
+									isGoogleLinked={false}
+								/>
+							</div>
+						),
+						wide: true,
 					},
 				],
 			},
@@ -284,7 +325,7 @@ const PERSONAS: Persona[] = [
 						id: "scheduled",
 						title: "Schedule View — admin, SCHEDULED",
 						caption:
-							"Once a plan is SCHEDULED it switches to the read-only matrix. Confirmed assignments here are what sync to Google Calendar.",
+							"Once a plan is SCHEDULED it switches to the read-only matrix. Confirmed assignments are final — and, if the schedule is linked to Google, can be published there.",
 						node: (
 							<ScheduleView
 								schedule={schedule}
@@ -327,18 +368,18 @@ const PERSONAS: Persona[] = [
 			{
 				id: "vol-onboarding",
 				title: "First-run onboarding",
-				subtitle: "The welcome tour a volunteer sees first.",
+				subtitle: "The welcome dialog a volunteer sees first.",
 				icon: Sparkles,
 				steps: [
 					{
 						id: "tour",
-						title: "Volunteer welcome tour",
+						title: "Welcome dialog",
 						caption:
-							"Simpler 3-step tour: find your schedule, volunteer for a role, wait for confirmation. Click to replay it.",
+							"Single-screen welcome: browse events, volunteer with one tap, wait for confirmation. Click to replay it.",
 						node: (
 							<div className="flex flex-col items-center gap-4">
 								<Button size="lg" onClick={playTour}>
-									<PlayCircle className="mr-2 h-5 w-5" /> Play volunteer tour
+									<PlayCircle className="mr-2 h-5 w-5" /> Play welcome dialog
 								</Button>
 								<p className="text-sm text-muted-foreground">
 									The real <code>WelcomeTour</code> dialog opens over the page.
@@ -358,7 +399,7 @@ const PERSONAS: Persona[] = [
 						id: "invite",
 						title: "Invite acceptance",
 						caption:
-							"Opening /invites/{token} signs the volunteer in (identity only) and creates a UserRole. No Google Calendar prompt.",
+							"Opening /invites/{token} signs the volunteer in via Keycloak (identity only) and creates a UserRole — never a calendar prompt.",
 						node: <InviteAcceptCard />,
 					},
 				],
@@ -400,7 +441,7 @@ const PERSONAS: Persona[] = [
 						id: "confirmed",
 						title: "Schedule View — volunteer, SCHEDULED",
 						caption:
-							"In a SCHEDULED plan the volunteer sees a matrix of only their own confirmed assignments — mirrored on their Google Calendar.",
+							"In a SCHEDULED plan the volunteer sees a matrix of only their own confirmed assignments — and, if the schedule is linked to Google, mirrored there.",
 						node: (
 							<ScheduleView
 								schedule={schedule}
@@ -440,9 +481,8 @@ export function FlowsGallery() {
 
 	return (
 		<div className="flex min-h-[calc(100vh-4rem)] w-full">
-			{/* Hidden tour instances, triggered via the dourak:open-tour event */}
-			<WelcomeTour role="admin" autoShow={false} />
-			<WelcomeTour role="volunteer" autoShow={false} />
+			{/* Hidden tour instance, triggered via the dourak:open-tour event */}
+			<WelcomeTour autoShow={false} />
 
 			{/* Left rail */}
 			<aside className="w-72 shrink-0 border-r bg-muted/20 overflow-y-auto">
@@ -452,7 +492,8 @@ export function FlowsGallery() {
 					</p>
 					<h1 className="text-lg font-bold">User story gallery</h1>
 					<p className="mt-1 text-xs text-muted-foreground">
-						Real components, mock data. Nothing here writes to a database.
+						Real components, mock data. Login is via Keycloak; Google
+						Calendar is optional. Nothing here writes to a database.
 					</p>
 				</div>
 				{PERSONAS.map((persona) => (
@@ -470,8 +511,8 @@ export function FlowsGallery() {
 										key={s.id}
 										onClick={() => selectStory(s.id)}
 										className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${isActive
-												? "bg-primary text-primary-foreground"
-												: "hover:bg-muted text-foreground"
+											? "bg-primary text-primary-foreground"
+											: "hover:bg-muted text-foreground"
 											}`}
 									>
 										<Icon className="h-4 w-4 shrink-0" />
@@ -504,8 +545,8 @@ export function FlowsGallery() {
 									key={s.id}
 									onClick={() => setActiveStepIdx(i)}
 									className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${i === activeStepIdx
-											? "bg-foreground text-background"
-											: "bg-muted text-muted-foreground hover:bg-muted/70"
+										? "bg-foreground text-background"
+										: "bg-muted text-muted-foreground hover:bg-muted/70"
 										}`}
 								>
 									{i + 1}. {s.title}

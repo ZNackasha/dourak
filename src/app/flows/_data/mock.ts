@@ -58,11 +58,10 @@ const roleMeta = [
     id: "role-worship",
     name: "Worship Leader",
     color: "#7C3AED",
-    type: "required",
   },
-  { id: "role-guitar", name: "Guitarist", color: "#2563EB", type: "optional" },
-  { id: "role-usher", name: "Usher", color: "#059669", type: "required" },
-  { id: "role-greeter", name: "Greeter", color: "#D97706", type: "optional" },
+  { id: "role-guitar", name: "Guitarist", color: "#2563EB" },
+  { id: "role-usher", name: "Usher", color: "#059669" },
+  { id: "role-greeter", name: "Greeter", color: "#D97706" },
 ];
 
 const roleMembers: Record<string, typeof otherVolunteers> = {
@@ -90,7 +89,6 @@ export const allRoles = roleMeta.map((r) => ({
   id: r.id,
   name: r.name,
   color: r.color,
-  type: r.type,
 }));
 
 // The signed-in volunteer belongs to Guitarist + Usher.

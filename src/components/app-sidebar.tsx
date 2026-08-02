@@ -1,66 +1,60 @@
 import * as React from "react"
-import { Calendar, Home, LogOut } from "lucide-react"
+import { Calendar, LogOut } from "lucide-react"
 import Link from "next/link"
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { SidebarNav } from "@/components/sidebar-nav"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { auth } from "@/auth"
+import { db } from "@/lib/prisma"
 
 export async function AppSidebar() {
   const session = await auth()
 
+  // Same visibility rule as /schedules: owned or co-administered.
+  const schedules = session?.user?.id
+    ? await db.schedule.findMany({
+      where: {
+        OR: [
+          { userId: session.user.id },
+          { admins: { some: { userId: session.user.id } } },
+        ],
+      },
+      select: { id: true, name: true },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+    })
+    : []
+
   return (
-    <Sidebar>
-      <SidebarHeader className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <Link href="/" className="group text-xl font-bold text-primary tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity press-down">
-          <Calendar className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-16 flex-row items-center justify-between border-b border-sidebar-border px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <Link href="/" className="group flex items-center gap-2 text-xl font-bold text-primary tracking-tight hover:opacity-90 transition-opacity press-down group-data-[collapsible=icon]:hidden">
+          <Calendar className="w-6 h-6 shrink-0 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
           <span>Dourak</span>
         </Link>
+        <SidebarTrigger className="text-sidebar-foreground/60 hover:text-sidebar-foreground" />
       </SidebarHeader>
       <SidebarContent>
-        {session?.user && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Home" render={<Link href="/" />} className="group/nav transition-all hover:translate-x-1">
-                    <Home className="transition-transform duration-300 group-hover/nav:scale-110 group-hover/nav:-rotate-6" />
-                    <span>Home</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Schedules" render={<Link href="/schedules" />} className="group/nav transition-all hover:translate-x-1">
-                    <Calendar className="transition-transform duration-300 group-hover/nav:scale-110 group-hover/nav:rotate-12" />
-                    <span>Schedules</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {session?.user && <SidebarNav schedules={schedules} />}
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border p-4">
+      <SidebarFooter className="border-t border-sidebar-border p-4 group-data-[collapsible=icon]:p-2">
         {session?.user ? (
-          <div className="flex items-center gap-3 w-full">
-            <Avatar className="h-9 w-9 ring-2 ring-transparent transition-all duration-300 hover:ring-primary/40 hover:scale-105">
+          <div className="flex items-center gap-3 w-full group-data-[collapsible=icon]:justify-center">
+            <Avatar className="h-9 w-9 shrink-0 ring-2 ring-transparent transition-all duration-300 hover:ring-primary/40 hover:scale-105 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
               <AvatarImage src={session.user.image ?? undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">
                 {session.user.name?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex flex-col flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
               <span className="text-sm font-medium text-sidebar-foreground truncate">
                 {session.user.name}
               </span>
@@ -68,7 +62,7 @@ export async function AppSidebar() {
                 {session.user.email}
               </span>
             </div>
-            <form action="/api/auth/logout" method="post">
+            <form action="/api/auth/logout" method="post" className="group-data-[collapsible=icon]:hidden">
               <button
                 type="submit"
                 className="group/out text-sidebar-foreground/60 hover:text-sidebar-foreground transition-all p-2 rounded-md hover:bg-sidebar-accent press-down"
@@ -89,6 +83,7 @@ export async function AppSidebar() {
           </div>
         )}
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

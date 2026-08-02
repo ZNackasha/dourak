@@ -6,7 +6,9 @@ import { listCalendars, listEvents } from "@/lib/google";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isScheduleAdmin } from "@/lib/permissions";
-import nodemailer from "nodemailer";
+import { materializeScheduleEventsIntoPlan } from "@/app/actions/schedule-calendar";
+import { getSiteUrl } from "@/lib/site";
+import { createEmailTransport, emailFrom } from "@/lib/email";
 import {
   generateSchedule,
   SchedulerEvent,
@@ -103,6 +105,7 @@ export async function autoScheduleAction(planId: string, scheduleId: string) {
           status: a.status,
         })),
         needed: shift.needed,
+        required: shift.required,
       });
     }
   }
@@ -178,6 +181,45 @@ export async function getCalendarsAction() {
   return listCalendars(session.user.id);
 }
 
+/** Events in a date range for viewing a calendar's content in-app. */
+export async function previewCalendarEventsAction(
+  calendarId: string,
+  startIso?: string,
+  endIso?: string,
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const start = startIso ? new Date(startIso) : new Date();
+  const end = endIso
+    ? new Date(endIso)
+    : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const events = await listEvents(session.user.id, calendarId, start, end);
+
+  return (events ?? [])
+    .slice(0, 200)
+    .map(
+      (e: {
+        id: string;
+        summary?: string;
+        start?: { dateTime?: string; date?: string };
+        end?: { dateTime?: string; date?: string };
+      }) => ({
+        id: e.id,
+        title: e.summary || "(untitled)",
+        start: e.start?.dateTime ?? e.start?.date ?? null,
+        end: e.end?.dateTime ?? e.end?.date ?? null,
+      }),
+    ) as {
+    id: string;
+    title: string;
+    start: string | null;
+    end: string | null;
+  }[];
+}
+
 export async function createScheduleAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -185,17 +227,21 @@ export async function createScheduleAction(formData: FormData) {
   }
 
   const name = formData.get("name") as string;
+  const mode = formData.get("mode") as string | null;
   const calendarId = (formData.get("calendarId") as string) || null;
 
   if (!name) {
     throw new Error("Missing fields");
+  }
+  if (mode === "google" && !calendarId) {
+    throw new Error("Select a Google calendar first");
   }
 
   // Create Schedule (Google Calendar link is optional).
   const schedule = await db.schedule.create({
     data: {
       name,
-      googleCalendarId: calendarId,
+      googleCalendarId: mode === "google" ? calendarId : null,
       userId: session.user.id,
     },
   });
@@ -380,6 +426,7 @@ export async function importGoogleEventsAction(
       roleId: string | null;
       needed: number;
       name: string | null;
+      required: boolean;
     }[] = [];
     for (const event of createdEvents) {
       const eventTemplates = event.recurringEventId
@@ -392,6 +439,7 @@ export async function importGoogleEventsAction(
             roleId: template.roleId,
             needed: template.needed,
             name: template.name,
+            required: template.required ?? true,
           });
         }
       } else {
@@ -400,6 +448,7 @@ export async function importGoogleEventsAction(
           roleId: null,
           needed: 1,
           name: null,
+          required: true,
         });
       }
     }
@@ -455,8 +504,8 @@ export async function createPlanAction(prevState: any, formData: FormData) {
     // Set end date to end of day to be inclusive
     endDate.setHours(23, 59, 59, 999);
 
-    // Create an empty plan. Events are added natively (createEventAction) or
-    // imported from a linked Google Calendar (importGoogleEventsAction).
+    // Create the plan, then materialize the schedule's native calendar into it.
+    // Google-linked schedules import from Google instead (importGoogleEventsAction).
     const plan = await db.plan.create({
       data: {
         name,
@@ -467,6 +516,18 @@ export async function createPlanAction(prevState: any, formData: FormData) {
       },
     });
     planId = plan.id;
+
+    if (!schedule.googleCalendarId) {
+      await materializeScheduleEventsIntoPlan(
+        plan.id,
+        scheduleId,
+        startDate,
+        endDate,
+      );
+    } else {
+      // Google-linked: pull the linked calendar's events for this plan's range.
+      await importGoogleEventsAction(plan.id, scheduleId);
+    }
   } catch (error) {
     console.error("Error creating plan:", error);
     return {
@@ -500,6 +561,12 @@ export async function addShiftAction(formData: FormData) {
   let roleId = roleIdInput && roleIdInput !== "__NEW__" ? roleIdInput : null;
   const scheduleId = formData.get("scheduleId") as string;
   const needed = parseInt(formData.get("needed") as string) || 1;
+  // Per-shift required flag; defaults to true when not provided.
+  const requiredInput = formData.get("required") as string | null;
+  const required =
+    requiredInput != null && requiredInput !== ""
+      ? requiredInput !== "false" && requiredInput !== "off"
+      : true;
 
   console.log("addShiftAction called with:", {
     eventId,
@@ -534,7 +601,6 @@ export async function addShiftAction(formData: FormData) {
         data: {
           name: newRoleName.trim(),
           scheduleId,
-          type: "required",
           inviteToken: crypto.randomUUID(),
           color: "#6366f1", // Default indigo
         },
@@ -611,6 +677,7 @@ export async function addShiftAction(formData: FormData) {
         data: {
           roleId: roleId,
           needed: needed,
+          required: required,
         },
       });
 
@@ -657,6 +724,7 @@ export async function addShiftAction(formData: FormData) {
         calendarEventId: id,
         roleId: roleId,
         needed: needed,
+        required: required,
       })),
     });
   }
@@ -679,6 +747,7 @@ export async function addShiftAction(formData: FormData) {
         recurringEventId: targetEvent.recurringEventId,
         roleId: roleId,
         needed: needed,
+        required: required,
       },
     });
   }
@@ -798,7 +867,7 @@ export async function removeShiftAction(shiftId: string, scheduleId: string) {
 export async function updateShiftAction(
   shiftId: string,
   scheduleId: string,
-  data: { name?: string; needed?: number },
+  data: { name?: string; needed?: number; required?: boolean },
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -846,6 +915,7 @@ export async function updateShiftAction(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.needed !== undefined && { needed: data.needed }),
+        ...(data.required !== undefined && { required: data.required }),
       },
     });
 
@@ -859,6 +929,7 @@ export async function updateShiftAction(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.needed !== undefined && { needed: data.needed }),
+        ...(data.required !== undefined && { required: data.required }),
       },
     });
   } else {
@@ -867,6 +938,7 @@ export async function updateShiftAction(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.needed !== undefined && { needed: data.needed }),
+        ...(data.required !== undefined && { required: data.required }),
       },
     });
   }
@@ -895,6 +967,78 @@ export async function updatePlanStatusAction(
   }
 
   revalidatePath(`/schedules/${scheduleId}`);
+}
+
+/**
+ * Emails every volunteer who holds a role in this schedule to let them know a
+ * plan has opened for recruitment, with a link to sign up. Triggered manually
+ * by an admin (e.g. the "Notify volunteers" button).
+ */
+export async function sendRecruitmentNotificationsAction(
+  planId: string,
+  scheduleId: string,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const isAdmin = await isScheduleAdmin(scheduleId, session.user.id);
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const plan = await db.plan.findUnique({
+    where: { id: planId },
+    include: { schedule: true },
+  });
+  if (!plan) return { count: 0 };
+
+  // Recipients: every distinct user assigned to a role in this schedule.
+  const roleUsers = await db.userRole.findMany({
+    where: { role: { scheduleId } },
+    include: { user: true },
+  });
+
+  const recipients = new Map<string, { name: string | null }>();
+  for (const ru of roleUsers) {
+    const email = ru.user?.email;
+    if (!email) continue;
+    if (ru.user?.emailRecruitment === false) continue; // opted out
+    recipients.set(email, { name: ru.user?.name ?? null });
+  }
+
+  if (recipients.size === 0) return { count: 0 };
+
+  const from = emailFrom();
+  const transporter = createEmailTransport();
+
+  const planUrl = `${getSiteUrl()}/schedules/${scheduleId}/plans/${planId}`;
+  const start = plan.startDate.toLocaleDateString();
+  const end = plan.endDate.toLocaleDateString();
+
+  let sent = 0;
+  for (const [email, { name }] of recipients) {
+    const greeting = name ? `Hi ${name},` : "Hi,";
+    const text = `${greeting}\n\nRecruitment is now open for "${plan.name}" (${start} – ${end}) in ${plan.schedule.name}.\n\nPlease log in to Dourak to mark your availability and sign up for the dates you can serve:\n${planUrl}\n\nThanks,\nDourak\n\n—\nManage which emails you receive: ${getSiteUrl()}/settings`;
+
+    try {
+      await transporter.sendMail({
+        from,
+        to: email,
+        subject: `Sign-ups open: ${plan.name}`,
+        text,
+      });
+      sent += 1;
+
+      if (!process.env.EMAIL_SERVER) {
+        console.log("----------------------------------------------");
+        console.log(`Recruitment email to ${email}:`);
+        console.log(text);
+        console.log("----------------------------------------------");
+      }
+    } catch (e) {
+      console.error(`Failed to send recruitment email to ${email}`, e);
+    }
+  }
+
+  return { count: sent };
 }
 
 export async function sendScheduleNotificationsAction(
@@ -937,6 +1081,8 @@ export async function sendScheduleNotificationsAction(
   for (const assignment of assignments) {
     const email = assignment.user?.email || assignment.email;
     if (!email) continue;
+    // Registered users can opt out; guests (email-only) have no account to opt out with.
+    if (assignment.user?.emailSchedule === false) continue;
 
     if (!emailGroups[email]) {
       emailGroups[email] = [];
@@ -944,17 +1090,8 @@ export async function sendScheduleNotificationsAction(
     emailGroups[email].push(assignment);
   }
 
-  const from = process.env.EMAIL_FROM || "noreply@dourak.app";
-  let transporter: nodemailer.Transporter;
-
-  if (process.env.EMAIL_SERVER) {
-    transporter = nodemailer.createTransport(process.env.EMAIL_SERVER);
-  } else {
-    // Mock transporter for dev
-    transporter = nodemailer.createTransport({
-      jsonTransport: true,
-    });
-  }
+  const from = emailFrom();
+  const transporter = createEmailTransport();
 
   for (const [email, userAssignments] of Object.entries(emailGroups)) {
     const assignmentList = userAssignments
@@ -970,7 +1107,7 @@ export async function sendScheduleNotificationsAction(
       })
       .join("\n");
 
-    const text = `Hello,\n\nYou have been scheduled for the following shifts in ${plan.name}:\n\n${assignmentList}\n\nPlease log in to Dourak to confirm your assignments.\n\nBest,\nDourak Team`;
+    const text = `Hello,\n\nYou have been scheduled for the following shifts in ${plan.name}:\n\n${assignmentList}\n\nPlease log in to Dourak to confirm your assignments.\n\nBest,\nDourak Team\n\n—\nManage which emails you receive: ${getSiteUrl()}/settings`;
 
     try {
       const info = await transporter.sendMail({

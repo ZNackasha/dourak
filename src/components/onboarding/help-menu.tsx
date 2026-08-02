@@ -6,8 +6,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -32,17 +30,10 @@ export function HelpMenu() {
 					</Button>
 				}
 			/>
-			<DropdownMenuContent align="end" className="w-56">
-				<DropdownMenuLabel>Help & tips</DropdownMenuLabel>
-				<DropdownMenuSeparator />
+			<DropdownMenuContent align="end" className="w-48">
 				<DropdownMenuItem onClick={openTour} className="gap-2 cursor-pointer">
-					<Sparkles className="size-4 text-primary" />
-					<div className="flex flex-col">
-						<span>Show me around</span>
-						<span className="text-[10px] text-muted-foreground">
-							Re-play the walkthrough
-						</span>
-					</div>
+					<Sparkles className="size-4" />
+					Quick tour
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					render={

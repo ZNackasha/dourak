@@ -4,8 +4,8 @@ import { Issuer, generators, type Client } from "openid-client";
 
 /**
  * OIDC client factories (openid-client v5) for:
- *  - Keycloak: primary login / identity provider.
- *  - Google:   secondary, admin-only calendar linkage (lazy). Not used for login.
+ *  - Keycloak: primary login / identity provider (Google login is brokered here).
+ *  - Google:   admin-only calendar linkage (lazy). Not used for login.
  *
  * Discovery results are memoized per server process.
  */
@@ -88,3 +88,4 @@ export function getGoogleClient(): Promise<Client> {
 }
 
 export { generators };
+

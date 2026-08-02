@@ -9,7 +9,9 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const callbackUrl = safeCallbackUrl(req.nextUrl.searchParams.get("callbackUrl"));
+  const callbackUrl = safeCallbackUrl(
+    req.nextUrl.searchParams.get("callbackUrl"),
+  );
 
   let client;
   try {
@@ -39,3 +41,4 @@ export async function GET(req: NextRequest) {
   res.cookies.set("kc_callback", callbackUrl, transientCookieOptions);
   return res;
 }
+
