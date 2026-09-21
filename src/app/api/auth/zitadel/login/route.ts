@@ -39,9 +39,17 @@ export async function GET(req: NextRequest) {
   // With ZITADEL_IDP_ID set, Zitadel skips its own screen and hands the user
   // straight to that provider. `?chooser=1` opts out so username/password and
   // other providers stay reachable.
-  const idpId = process.env.ZITADEL_IDP_ID;
+  const idpId = process.env.ZITADEL_IDP_ID?.trim();
   if (idpId && req.nextUrl.searchParams.get("chooser") !== "1") {
-    scopes.push(`urn:zitadel:iam:org:idp:id:${idpId}`);
+    if (/^\d+$/.test(idpId)) {
+      scopes.push(`urn:zitadel:iam:org:idp:id:${idpId}`);
+    } else {
+      // A non-numeric value (e.g. a Google client id) breaks sign-in entirely,
+      // so fall back to the normal Zitadel screen instead.
+      console.error(
+        "ZITADEL_IDP_ID must be the numeric Zitadel provider id; ignoring it",
+      );
+    }
   }
 
   const authUrl = client.authorizationUrl({
