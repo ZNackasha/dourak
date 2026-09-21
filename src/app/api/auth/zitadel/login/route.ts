@@ -34,8 +34,18 @@ export async function GET(req: NextRequest) {
       ? requestedPrompt
       : "login";
 
+  const scopes = ["openid", "email", "profile"];
+
+  // With ZITADEL_IDP_ID set, Zitadel skips its own screen and hands the user
+  // straight to that provider. `?chooser=1` opts out so username/password and
+  // other providers stay reachable.
+  const idpId = process.env.ZITADEL_IDP_ID;
+  if (idpId && req.nextUrl.searchParams.get("chooser") !== "1") {
+    scopes.push(`urn:zitadel:iam:org:idp:id:${idpId}`);
+  }
+
   const authUrl = client.authorizationUrl({
-    scope: "openid email profile",
+    scope: scopes.join(" "),
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
     state,
@@ -50,3 +60,4 @@ export async function GET(req: NextRequest) {
   res.cookies.set("zt_callback", callbackUrl, transientCookieOptions);
   return res;
 }
+
