@@ -31,3 +31,23 @@ export async function updateEmailPreferenceAction(
   revalidatePath("/settings");
 }
 
+// Digits with an optional leading "+", after separators are stripped.
+const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
+
+export async function updatePhoneAction(input: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const phone = input.replace(/[\s().-]/g, "");
+  if (!PHONE_PATTERN.test(phone)) {
+    throw new Error("Enter a valid phone number, e.g. +15551234567");
+  }
+
+  await db.user.update({
+    where: { id: session.user.id },
+    data: { phone },
+  });
+
+  revalidatePath("/settings");
+}
+

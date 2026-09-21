@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, destroyCurrentSession } from "@/lib/auth/session";
-import { getKeycloakClient, appUrl } from "@/lib/auth/oidc";
+import { getZitadelClient, appUrl } from "@/lib/auth/oidc";
 import { db } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ async function handle(req: NextRequest) {
   let idToken: string | null = null;
   if (user) {
     const account = await db.account.findFirst({
-      where: { userId: user.id, provider: "keycloak" },
+      where: { userId: user.id, provider: "zitadel" },
       select: { id_token: true },
     });
     idToken = account?.id_token ?? null;
@@ -21,7 +21,7 @@ async function handle(req: NextRequest) {
 
   const home = new URL("/", appUrl());
   try {
-    const client = await getKeycloakClient();
+    const client = await getZitadelClient();
     const endSessionUrl = client.endSessionUrl({
       id_token_hint: idToken ?? undefined,
       post_logout_redirect_uri: `${appUrl()}/`,
@@ -29,7 +29,7 @@ async function handle(req: NextRequest) {
     return NextResponse.redirect(endSessionUrl);
   } catch (err) {
     console.error(
-      "Keycloak end-session failed, clearing local session only",
+      "Zitadel end-session failed, clearing local session only",
       err,
     );
     return NextResponse.redirect(home);

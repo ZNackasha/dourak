@@ -8,10 +8,9 @@
  *
  * Resolution order:
  *   1. NEXT_PUBLIC_SITE_URL            — explicit canonical domain (recommended)
- *   2. NEXTAUTH_URL                    — auth origin, usually the live domain
- *   3. VERCEL_PROJECT_PRODUCTION_URL   — stable Vercel production domain
- *   4. VERCEL_URL                      — per-deployment Vercel URL (previews)
- *   5. https://dourak.app              — final fallback
+ *   2. VERCEL_PROJECT_PRODUCTION_URL   — stable Vercel production domain
+ *   3. VERCEL_URL                      — per-deployment Vercel URL (previews)
+ *   4. https://dourak.app              — final fallback
  */
 const PRIMARY_DOMAIN = "https://dourak.app";
 
@@ -25,7 +24,6 @@ function withProtocol(value: string): string {
 export function getSiteUrl(): string {
   const candidate =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXTAUTH_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
     process.env.VERCEL_URL ||
     PRIMARY_DOMAIN;

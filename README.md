@@ -1,32 +1,37 @@
 # Dourak
 
-Volunteer coordination app built with Next.js App Router, Prisma, Postgres, and NextAuth (Google).
+Volunteer coordination app built with Next.js App Router, Prisma, PostgreSQL, and Zitadel OIDC.
 
 ## Features
 
-- **Google Calendar Integration**: Link your Google Calendar to import events.
-- **Schedule Management**: Create schedules for specific time periods based on your calendar events.
-- **Volunteer Assignments**: Assign volunteers to specific shifts within events.
-- **Google Auth**: Secure login with Google.
+- **Zitadel authentication**: Sign in through the Dourak Zitadel organization.
+- **Google Calendar integration**: Link a Google account separately to import events.
+- **Schedule management**: Create schedules and assign volunteers to event shifts.
 
 ## Prerequisites
 
-- Node 18+
+- Node 20+
 - Postgres database (Docker Compose included)
+- A Zitadel Web OIDC application
 - Google Cloud Project with Calendar API enabled
 
 ## Environment variables
 
-Copy `.env` and populate the following values:
+Copy `.env.example` to `.env` and populate the provider credentials:
 
 ```env
-DATABASE_URL="postgresql://church_admin:church_admin@localhost:5434/church_scheduler?schema=public"
-NEXTAUTH_SECRET="use `openssl rand -base64 32`"
-GOOGLE_CLIENT_ID="Google OAuth client id"
-GOOGLE_CLIENT_SECRET="Google OAuth client secret"
+APP_URL="http://localhost:3000"
+ZITADEL_ISSUER="https://your-instance.zitadel.cloud"
+ZITADEL_CLIENT_ID="your Zitadel client id"
+ZITADEL_CLIENT_SECRET="your Zitadel client secret"
 ```
 
-**Important**: You must enable the **Google Calendar API** in your Google Cloud Console and add `http://localhost:3000/api/auth/callback/google` to the authorized redirect URIs.
+Configure the Zitadel application as a Web application using Authorization Code, PKCE, and Basic client authentication. Add these local URLs:
+
+- Redirect URI: `http://localhost:3000/api/auth/zitadel/callback`
+- Post-logout URI: `http://localhost:3000/`
+
+Google Calendar uses a separate OAuth client. Enable the Google Calendar API and add `http://localhost:3000/api/auth/google/callback` as its redirect URI.
 
 ## Install & database setup
 
@@ -48,9 +53,7 @@ Navigate to `http://localhost:3000`.
 
 ## Workflow
 
-1. **Sign in with Google** (Basic profile access).
-2. **Create a Schedule**:
-   - You will be prompted to grant **Google Calendar permissions** if you haven't already.
-   - Select a Google Calendar and a date range to import events.
-3. **Manage Events**: View imported events and assign volunteers.
+1. Sign in through Zitadel.
+2. Connect Google Calendar only when calendar access is needed.
+3. Create schedules, import events, and assign volunteers.
 

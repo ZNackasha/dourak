@@ -1,26 +1,31 @@
 import { auth } from "@/auth";
 import Link from "next/link";
-import { ArrowRight, Calendar, LayoutGrid } from "lucide-react";
+import { ArrowRight, Calendar, LayoutGrid, TriangleAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { safeCallbackUrl } from "@/lib/auth/callback-url";
 
-/**
- * Only allow internal, same-origin redirect targets to avoid open-redirect
- * vulnerabilities. Anything that isn't a plain "/path" falls back to /schedules.
- */
-function safeCallbackUrl(raw: string | string[] | undefined): string {
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (value && value.startsWith("/") && !value.startsWith("//")) {
-    return value;
-  }
-  return "/schedules";
-}
+const SIGN_IN_ERRORS: Record<string, { title: string; description: string }> = {
+  zitadel: {
+    title: "Sign-in is unavailable",
+    description:
+      "We couldn't reach the sign-in service. Please try again in a moment.",
+  },
+  callback: {
+    title: "Sign-in didn't complete",
+    description:
+      "Your sign-in couldn't be finished. This usually clears up if you start again.",
+  },
+};
 
 export default async function LoginPage({
   searchParams,
 }: Readonly<{
-  searchParams: Promise<{ callbackUrl?: string | string[] }>;
+  searchParams: Promise<{ callbackUrl?: string | string[]; error?: string | string[] }>;
 }>) {
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, error } = await searchParams;
   const redirectTo = safeCallbackUrl(callbackUrl);
+  const errorCode = Array.isArray(error) ? error[0] : error;
+  const signInError = errorCode ? SIGN_IN_ERRORS[errorCode] : undefined;
 
   const session = await auth();
   if (session?.user) {
@@ -86,13 +91,21 @@ export default async function LoginPage({
           </div>
         </div>
 
-        {/* Keycloak */}
+        {signInError && (
+          <Alert variant="destructive">
+            <TriangleAlert />
+            <AlertTitle>{signInError.title}</AlertTitle>
+            <AlertDescription>{signInError.description}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Zitadel */}
         <a
-          href={`/api/auth/keycloak/login?callbackUrl=${encodeURIComponent(redirectTo)}`}
+          href={`/api/auth/zitadel/login?callbackUrl=${encodeURIComponent(redirectTo)}`}
           className="press-down group flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-xl hover:shadow-foreground/20 active:translate-y-0 active:scale-[0.98]"
         >
           <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-          Sign in
+          {signInError ? "Try again" : "Sign in"}
         </a>
 
         <p className="text-center text-xs text-muted-foreground">

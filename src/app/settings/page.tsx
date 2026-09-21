@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { EmailPreferences } from "@/components/email-preferences";
+import { PhoneForm } from "@/components/phone-form";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function SettingsPage() {
 	const user = await db.user.findUnique({
 		where: { id: session.user.id },
 		select: {
+			phone: true,
 			emailRecruitment: true,
 			emailSchedule: true,
 			emailRoleAdded: true,
@@ -28,6 +30,12 @@ export default async function SettingsPage() {
 				<p className="mt-2 text-muted-foreground">
 					Choose which emails you want to receive.
 				</p>
+			</div>
+			<h2 className="text-sm font-semibold text-foreground mb-3">
+				Contact
+			</h2>
+			<div className="mb-8 rounded-xl border border-border bg-card p-4">
+				<PhoneForm initial={user.phone} />
 			</div>
 			<h2 className="text-sm font-semibold text-foreground mb-3">
 				Email notifications

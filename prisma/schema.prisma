@@ -18,6 +18,8 @@ model User {
   email          String?      @unique
   emailVerified  DateTime?
   image          String?
+  // Required before the app can be used; collected at /onboarding/phone.
+  phone          String?
   // Email notification opt-outs (managed by the user in /settings).
   emailRecruitment Boolean    @default(true)
   emailSchedule    Boolean    @default(true)

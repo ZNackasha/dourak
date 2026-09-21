@@ -7,7 +7,8 @@ This guide will help you deploy Dourak to Vercel.
 1.  A [GitHub](https://github.com) account.
 2.  A [Vercel](https://vercel.com) account.
 3.  A [Resend](https://resend.com) account (for emails).
-4.  A [Google Cloud Console](https://console.cloud.google.com) project (for Google Login & Calendar).
+4.  A Zitadel Web OIDC application in the Dourak organization.
+5.  A Google Cloud project with the Calendar API enabled.
 
 ## Step 1: Push to GitHub
 
@@ -46,21 +47,26 @@ This guide will help you deploy Dourak to Vercel.
 
 Expand the **"Environment Variables"** section and add the following:
 
-| Variable               | Value                                         | Description                                                        |
-| :--------------------- | :-------------------------------------------- | :----------------------------------------------------------------- |
-| `NEXTAUTH_SECRET`      | `[Generate a random string]`                  | You can generate one with `openssl rand -base64 32`                |
-| `NEXTAUTH_URL`         | `https://your-project.vercel.app`             | Your Vercel deployment URL (add this after first deploy if needed) |
-| `NEXT_PUBLIC_SITE_URL` | `https://dourak.app`                          | Your **primary** public domain — used for SEO canonical URLs       |
-| `GOOGLE_CLIENT_ID`     | `[Your Google Client ID]`                     | From Google Cloud Console                                          |
-| `GOOGLE_CLIENT_SECRET` | `[Your Google Client Secret]`                 | From Google Cloud Console                                          |
-| `RESEND_API_KEY`       | `[Your Resend API Key]`                       | From Resend Dashboard                                              |
-| `EMAIL_FROM`           | `onboarding@dourak.app`                       | Or your verified domain email                                      |
-| `EMAIL_SERVER`         | `smtp://resend:[API_KEY]@smtp.resend.com:465` | Replace `[API_KEY]` with your Resend API Key                       |
+| Variable                | Value                                         | Description                                      |
+| :---------------------- | :-------------------------------------------- | :----------------------------------------------- |
+| `APP_URL`               | `https://dourak.app`                          | Public origin used by OIDC callbacks             |
+| `NEXT_PUBLIC_SITE_URL`  | `https://dourak.app`                          | Primary public domain used for canonical URLs    |
+| `ZITADEL_ISSUER`        | `https://your-instance.zitadel.cloud`         | Zitadel instance issuer, without a trailing path |
+| `ZITADEL_CLIENT_ID`     | `[Your Zitadel Client ID]`                    | From the Dourak Zitadel OIDC application         |
+| `ZITADEL_CLIENT_SECRET` | `[Your Zitadel Client Secret]`                | From the Dourak Zitadel OIDC application         |
+| `GOOGLE_CLIENT_ID`      | `[Your Google Client ID]`                     | Separate Google Calendar OAuth client            |
+| `GOOGLE_CLIENT_SECRET`  | `[Your Google Client Secret]`                 | Separate Google Calendar OAuth client            |
+| `EMAIL_FROM`            | `onboarding@dourak.app`                       | Your verified sender                             |
+| `EMAIL_SERVER`          | `smtp://resend:[API_KEY]@smtp.resend.com:465` | SMTP connection string                           |
 
 **Important:**
 
-- Update your **Google Cloud Console** "Authorized redirect URIs" to include:
-  - `https://your-project.vercel.app/api/auth/callback/google`
+- Configure the Zitadel application as **Web**, with Authorization Code, PKCE,
+  and Basic client authentication.
+- Add `https://dourak.app/api/auth/zitadel/callback` as an allowed redirect URI.
+- Add `https://dourak.app/` as an allowed post-logout URI.
+- Add `https://dourak.app/api/auth/google/callback` to the separate Google
+  Calendar OAuth client's authorized redirect URIs.
 
 ### Multiple domains & SEO
 
@@ -73,13 +79,10 @@ duplicate-content penalties, search engines must be told which domain is
   `https://dourak.app`) on **all** deployments. Every domain will then emit a
   `<link rel="canonical">`, `sitemap.xml`, and `robots.txt` pointing at that
   primary domain, consolidating your SEO ranking.
-- Add each domain you serve under as an **authorized redirect URI** in Google
-  Cloud Console so login works everywhere:
-  - `https://dourak.app/api/auth/callback/google`
-  - `https://dourak.z-soft.dev/api/auth/callback/google`
-  - `https://your-project.vercel.app/api/auth/callback/google`
-- If `NEXT_PUBLIC_SITE_URL` is not set, the app falls back to
-  `NEXTAUTH_URL` → Vercel URLs → `https://dourak.app`.
+- Use one stable production origin in `APP_URL`. Add its Zitadel callback and
+  post-logout URLs to the OIDC application.
+- If `NEXT_PUBLIC_SITE_URL` is not set, canonical URLs fall back to Vercel's
+  production URL and then `https://dourak.app`.
 
 ## Step 5: Deploy
 
@@ -104,4 +107,5 @@ Alternatively, you can add a build command in `package.json` to run migrations o
 
 ## Step 7: Verify
 
-Visit your Vercel URL and try to log in!
+Visit the production URL, sign in through Zitadel, then connect Google Calendar
+from an admin workflow to verify the independent OAuth integration.

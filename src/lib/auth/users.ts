@@ -6,16 +6,17 @@ import { createEmailTransport, emailFrom } from "@/lib/email";
 import { getSiteUrl } from "@/lib/site";
 
 /**
- * Upsert the application `User` (and a linked `keycloak` `Account`) from a
- * Keycloak OIDC login. Keycloak is the identity provider; the user's `sub`
+ * Upsert the application `User` (and a linked `zitadel` `Account`) from a
+ * Zitadel OIDC login. Zitadel is the identity provider; the user's `sub`
  * uniquely identifies them, and we fall back to email linking.
  */
-export async function upsertUserFromKeycloak(
+export async function upsertUserFromZitadel(
   claims: IdTokenClaims,
   tokenSet: TokenSet,
-): Promise<{ id: string }> {
+): Promise<{ id: string; phone: string | null }> {
   const sub = claims.sub;
   const email = (claims.email as string | undefined) ?? null;
+  const emailVerified = claims.email_verified === true;
   const name =
     (claims.name as string | undefined) ??
     (claims.preferred_username as string | undefined) ??
@@ -25,7 +26,7 @@ export async function upsertUserFromKeycloak(
   const existingAccount = await db.account.findUnique({
     where: {
       provider_providerAccountId: {
-        provider: "keycloak",
+        provider: "zitadel",
         providerAccountId: sub,
       },
     },
@@ -34,19 +35,21 @@ export async function upsertUserFromKeycloak(
 
   let user = existingAccount?.user ?? null;
 
-  if (!user && email) {
+  if (!user && email && emailVerified) {
     user = await db.user.findUnique({ where: { email } });
   }
 
+  let isNewUser = false;
   if (!user) {
     user = await db.user.create({
       data: {
         email,
         name,
         image,
-        emailVerified: claims.email_verified ? new Date() : null,
+        emailVerified: emailVerified ? new Date() : null,
       },
     });
+    isNewUser = true;
   } else {
     user = await db.user.update({
       where: { id: user.id },
@@ -71,25 +74,24 @@ export async function upsertUserFromKeycloak(
   await db.account.upsert({
     where: {
       provider_providerAccountId: {
-        provider: "keycloak",
+        provider: "zitadel",
         providerAccountId: sub,
       },
     },
     create: {
       userId: user.id,
-      provider: "keycloak",
+      provider: "zitadel",
       providerAccountId: sub,
       ...accountData,
     },
     update: accountData,
   });
 
-  // No prior Keycloak account = this is their first-ever login.
-  if (!existingAccount && user.email) {
+  if (isNewUser && user.email) {
     await sendWelcomeEmail(user.email, user.name);
   }
 
-  return { id: user.id };
+  return { id: user.id, phone: user.phone };
 }
 
 /** One-time welcome email on a user's first login. Never blocks the login. */

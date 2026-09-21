@@ -39,7 +39,7 @@ Dourak turns a Google Calendar into a self-service volunteer scheduling system.
 | Model            | Purpose                                                                                      | Key fields                                                   |
 | ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `User`           | Any authenticated person.                                                                    | `email` (unique), `name`, `image`                            |
-| `Account`        | OAuth / email credentials (NextAuth). Holds Google `access_token`, `refresh_token`, `scope`. | `provider`, `scope`, `refresh_token`                         |
+| `Account`        | OIDC and Google Calendar OAuth credentials. Holds provider tokens and granted scopes.       | `provider`, `scope`, `refresh_token`                         |
 | `Schedule`       | Wrapper around one Google Calendar.                                                          | `name`, `googleCalendarId`, `userId` (owner)                 |
 | `ScheduleAdmin`  | Co-admins of a schedule (besides owner).                                                     | `scheduleId` + `userId`                                      |
 | `Plan`           | A date-range import of calendar events.                                                      | `name`, `startDate`, `endDate`, `status`                     |

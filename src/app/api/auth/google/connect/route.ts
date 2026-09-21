@@ -11,7 +11,7 @@ import { getSessionUser } from "@/lib/auth/session";
 export const dynamic = "force-dynamic";
 
 /**
- * Admin-only, lazy Google Calendar linkage. Requires an existing (Keycloak)
+ * Admin-only, lazy Google Calendar linkage. Requires an existing (Zitadel)
  * session — this does NOT log the user in, it only attaches Google calendar
  * tokens to the already-authenticated account.
  */
