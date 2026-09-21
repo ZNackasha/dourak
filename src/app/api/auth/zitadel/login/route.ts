@@ -26,12 +26,21 @@ export async function GET(req: NextRequest) {
   const state = generators.state();
   const nonce = generators.nonce();
 
+  // Default to "login" so Zitadel shows the provider list (e.g. Google) instead
+  // of its session chooser when the user already has a Zitadel session.
+  const requestedPrompt = req.nextUrl.searchParams.get("prompt");
+  const prompt =
+    requestedPrompt === "select_account" || requestedPrompt === "none"
+      ? requestedPrompt
+      : "login";
+
   const authUrl = client.authorizationUrl({
     scope: "openid email profile",
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
     state,
     nonce,
+    prompt,
   });
 
   const res = NextResponse.redirect(authUrl);

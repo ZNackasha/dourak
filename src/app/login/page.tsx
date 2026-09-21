@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Calendar, LayoutGrid, TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { safeCallbackUrl } from "@/lib/auth/callback-url";
@@ -67,6 +68,14 @@ export default async function LoginPage({
           </Link>
         </div>
       </div>
+    );
+  }
+
+  // Nothing to show a signed-out user, so skip the interstitial. The page below
+  // is only rendered when sign-in failed and the user needs to retry.
+  if (!signInError) {
+    redirect(
+      `/api/auth/zitadel/login?callbackUrl=${encodeURIComponent(redirectTo)}`,
     );
   }
 
