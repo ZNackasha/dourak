@@ -35,7 +35,18 @@ export async function GET(req: NextRequest) {
     );
 
     const claims = tokenSet.claims();
-    const user = await upsertUserFromZitadel(claims, tokenSet);
+
+    // Zitadel omits profile/email claims from the id_token whenever an access
+    // token is issued, so the userinfo endpoint is the reliable source.
+    let profile = claims;
+    try {
+      const userinfo = await client.userinfo(tokenSet);
+      profile = { ...claims, ...userinfo };
+    } catch (err) {
+      console.error("Zitadel userinfo failed, using id_token claims", err);
+    }
+
+    const user = await upsertUserFromZitadel(profile, tokenSet);
     await createUserSession(user.id);
 
     const destination = user.phone

@@ -57,6 +57,8 @@ export async function upsertUserFromZitadel(
         name: name ?? user.name,
         image: image ?? user.image,
         email: email ?? user.email,
+        emailVerified:
+          user.emailVerified ?? (emailVerified ? new Date() : null),
       },
     });
   }
