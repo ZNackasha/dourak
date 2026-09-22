@@ -35,8 +35,14 @@ export async function upsertUserFromZitadel(
 
   let user = existingAccount?.user ?? null;
 
-  if (!user && email && emailVerified) {
-    user = await db.user.findUnique({ where: { email } });
+  // The verified email is the identity of record. If another row already owns
+  // it, adopt that row: the account may have been created before claims were
+  // available, leaving a placeholder whose update would hit the unique index.
+  if (email && emailVerified) {
+    const emailOwner = await db.user.findUnique({ where: { email } });
+    if (emailOwner && emailOwner.id !== user?.id) {
+      user = emailOwner;
+    }
   }
 
   let isNewUser = false;
@@ -86,7 +92,7 @@ export async function upsertUserFromZitadel(
       providerAccountId: sub,
       ...accountData,
     },
-    update: accountData,
+    update: { ...accountData, userId: user.id },
   });
 
   if (isNewUser && user.email) {
