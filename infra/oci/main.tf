@@ -155,8 +155,9 @@ resource "oci_core_instance" "keycloak" {
   }
 
   lifecycle {
-    # A newer Ubuntu image or an edited cloud-init would otherwise replace the running server.
-    ignore_changes = [source_details[0].source_id, metadata["user_data"]]
+    # A newer Ubuntu image or an edited cloud-init would otherwise replace the running server;
+    # the AD is ignored so capacity retries can rotate availability_domain_index.
+    ignore_changes = [availability_domain, source_details[0].source_id, metadata["user_data"]]
   }
 }
 
@@ -219,8 +220,8 @@ resource "oci_mysql_mysql_db_system" "keycloak" {
   }
 
   lifecycle {
-    # Oracle upgrades Always Free systems itself; never let a version diff replace the database.
-    ignore_changes = [mysql_version]
+    # Oracle upgrades Always Free systems itself; never let a version or AD diff replace the database.
+    ignore_changes = [availability_domain, mysql_version]
   }
 }
 
