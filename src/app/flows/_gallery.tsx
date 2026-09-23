@@ -101,7 +101,7 @@ function InviteAcceptCard() {
 				</div>
 				<Button className="w-full">Join role</Button>
 				<p className="text-[0.7rem] text-muted-foreground">
-					Volunteers sign in via Zitadel — no Google Calendar permissions,
+					Volunteers sign in via Keycloak — no Google Calendar permissions,
 					ever.
 				</p>
 			</CardContent>
@@ -165,7 +165,7 @@ const PERSONAS: Persona[] = [
 						id: "google",
 						title: "Create Schedule — Google linked",
 						caption:
-							"If the admin has connected Google, a toggle reveals a calendar picker for optional event import. Login itself is via Zitadel — Google is only ever used for calendars.",
+							"If the admin has connected Google, a toggle reveals a calendar picker for optional event import. Login itself is via Keycloak — Google is only ever used for calendars.",
 						node: (
 							<Card className="max-w-lg mx-auto">
 								<CardHeader>
@@ -399,7 +399,7 @@ const PERSONAS: Persona[] = [
 						id: "invite",
 						title: "Invite acceptance",
 						caption:
-							"Opening /invites/{token} signs the volunteer in via Zitadel (identity only) and creates a UserRole — never a calendar prompt.",
+							"Opening /invites/{token} signs the volunteer in via Keycloak (identity only) and creates a UserRole — never a calendar prompt.",
 						node: <InviteAcceptCard />,
 					},
 				],
@@ -492,7 +492,7 @@ export function FlowsGallery() {
 					</p>
 					<h1 className="text-lg font-bold">User story gallery</h1>
 					<p className="mt-1 text-xs text-muted-foreground">
-						Real components, mock data. Login is via Zitadel; Google
+						Real components, mock data. Login is via Keycloak; Google
 						Calendar is optional. Nothing here writes to a database.
 					</p>
 				</div>

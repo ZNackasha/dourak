@@ -4,7 +4,7 @@ import { Issuer, generators, type Client } from "openid-client";
 
 /**
  * OIDC client factories (openid-client v5) for:
- *  - Zitadel: primary login / identity provider (Google login is brokered here).
+ *  - Keycloak: primary login / identity provider (Google login is brokered here).
  *  - Google:   admin-only calendar linkage (lazy). Not used for login.
  *
  * Discovery results are memoized per server process.
@@ -29,25 +29,25 @@ export const transientCookieOptions = {
   maxAge: 60 * 10, // 10 minutes
 };
 
-export const ZITADEL_CALLBACK_PATH = "/api/auth/zitadel/callback";
+export const KEYCLOAK_CALLBACK_PATH = "/api/auth/keycloak/callback";
 export const GOOGLE_CALLBACK_PATH = "/api/auth/google/callback";
 
 export const GOOGLE_CALENDAR_SCOPE =
   "openid email profile https://www.googleapis.com/auth/calendar.readonly";
 
-let zitadelClient: Promise<Client> | null = null;
+let keycloakClient: Promise<Client> | null = null;
 let googleClient: Promise<Client> | null = null;
 
-export function getZitadelClient(): Promise<Client> {
-  if (!zitadelClient) {
-    zitadelClient = (async () => {
-      const issuerUrl = process.env.ZITADEL_ISSUER;
-      const clientId = process.env.ZITADEL_CLIENT_ID;
-      const clientSecret = process.env.ZITADEL_CLIENT_SECRET;
-      if (!issuerUrl) throw new Error("ZITADEL_ISSUER is not set");
+export function getKeycloakClient(): Promise<Client> {
+  if (!keycloakClient) {
+    keycloakClient = (async () => {
+      const issuerUrl = process.env.KEYCLOAK_ISSUER;
+      const clientId = process.env.KEYCLOAK_CLIENT_ID;
+      const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+      if (!issuerUrl) throw new Error("KEYCLOAK_ISSUER is not set");
       if (!clientId || !clientSecret) {
         throw new Error(
-          "ZITADEL_CLIENT_ID / ZITADEL_CLIENT_SECRET are not set",
+          "KEYCLOAK_CLIENT_ID / KEYCLOAK_CLIENT_SECRET are not set",
         );
       }
       const issuer = await Issuer.discover(issuerUrl);
@@ -55,15 +55,16 @@ export function getZitadelClient(): Promise<Client> {
         client_id: clientId,
         client_secret: clientSecret,
         token_endpoint_auth_method: "client_secret_basic",
-        redirect_uris: [`${appUrl()}${ZITADEL_CALLBACK_PATH}`],
+        redirect_uris: [`${appUrl()}${KEYCLOAK_CALLBACK_PATH}`],
         response_types: ["code"],
       });
     })().catch((err) => {
-      zitadelClient = null;
+      // Reset so a later request can retry, e.g. while Keycloak is still booting.
+      keycloakClient = null;
       throw err;
     });
   }
-  return zitadelClient;
+  return keycloakClient;
 }
 
 export function getGoogleClient(): Promise<Client> {

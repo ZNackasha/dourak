@@ -19,5 +19,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # Local-only Keycloak (dev mode, embedded database). Production runs from
+  # keycloak/docker-compose.yml on the VM.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    container_name: dourak-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8181:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      DOURAK_APP_URL: http://localhost:3000
+      KC_DOURAK_CLIENT_SECRET: dourak-dev-secret
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KC_SMTP_PASSWORD: ${RESEND_API_KEY:-}
+      KC_SMTP_FROM: ${KC_SMTP_FROM:-onboarding@dourak.app}
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./keycloak/realms:/opt/keycloak/data/import:ro
+
 volumes:
   postgres-data:
+  keycloak-data:

@@ -7,7 +7,7 @@ This guide will help you deploy Dourak to Vercel.
 1.  A [GitHub](https://github.com) account.
 2.  A [Vercel](https://vercel.com) account.
 3.  A [Resend](https://resend.com) account (for emails).
-4.  A Zitadel Web OIDC application in the Dourak organization.
+4.  A Keycloak server running the `dourak` realm (see "Keycloak server" below).
 5.  A Google Cloud project with the Calendar API enabled.
 
 ## Step 1: Push to GitHub
@@ -51,9 +51,10 @@ Expand the **"Environment Variables"** section and add the following:
 | :---------------------- | :-------------------------------------------- | :----------------------------------------------- |
 | `APP_URL`               | `https://dourak.app`                          | Public origin used by OIDC callbacks             |
 | `NEXT_PUBLIC_SITE_URL`  | `https://dourak.app`                          | Primary public domain used for canonical URLs    |
-| `ZITADEL_ISSUER`        | `https://your-instance.zitadel.cloud`         | Zitadel instance issuer, without a trailing path |
-| `ZITADEL_CLIENT_ID`     | `[Your Zitadel Client ID]`                    | From the Dourak Zitadel OIDC application         |
-| `ZITADEL_CLIENT_SECRET` | `[Your Zitadel Client Secret]`                | From the Dourak Zitadel OIDC application         |
+| `KEYCLOAK_ISSUER`       | `https://auth.dourak.app/realms/dourak`       | Keycloak realm issuer URL                        |
+| `KEYCLOAK_CLIENT_ID`    | `dourak`                                      | Client defined in the realm file                 |
+| `KEYCLOAK_CLIENT_SECRET`| `[KC_DOURAK_CLIENT_SECRET from the VM]`       | Must match the secret Keycloak was started with  |
+| `KEYCLOAK_IDP_HINT`     | *(optional)* `google`                         | Skip the Keycloak login page and go to Google    |
 | `GOOGLE_CLIENT_ID`      | `[Your Google Client ID]`                     | Separate Google Calendar OAuth client            |
 | `GOOGLE_CLIENT_SECRET`  | `[Your Google Client Secret]`                 | Separate Google Calendar OAuth client            |
 | `EMAIL_FROM`            | `onboarding@dourak.app`                       | Your verified sender                             |
@@ -61,10 +62,10 @@ Expand the **"Environment Variables"** section and add the following:
 
 **Important:**
 
-- Configure the Zitadel application as **Web**, with Authorization Code, PKCE,
-  and Basic client authentication.
-- Add `https://dourak.app/api/auth/zitadel/callback` as an allowed redirect URI.
-- Add `https://dourak.app/` as an allowed post-logout URI.
+- The realm's redirect and post-logout URLs are generated from
+  `DOURAK_APP_URL` on the Keycloak server, so set it to `https://dourak.app`.
+- Add `https://auth.dourak.app/realms/dourak/broker/google/endpoint` to the
+  Google OAuth client used for sign-in.
 - Add `https://dourak.app/api/auth/google/callback` to the separate Google
   Calendar OAuth client's authorized redirect URIs.
 
@@ -79,8 +80,8 @@ duplicate-content penalties, search engines must be told which domain is
   `https://dourak.app`) on **all** deployments. Every domain will then emit a
   `<link rel="canonical">`, `sitemap.xml`, and `robots.txt` pointing at that
   primary domain, consolidating your SEO ranking.
-- Use one stable production origin in `APP_URL`. Add its Zitadel callback and
-  post-logout URLs to the OIDC application.
+- Use one stable production origin in `APP_URL`, and use the same origin for
+  `DOURAK_APP_URL` on the Keycloak server.
 - If `NEXT_PUBLIC_SITE_URL` is not set, canonical URLs fall back to Vercel's
   production URL and then `https://dourak.app`.
 
@@ -107,5 +108,36 @@ Alternatively, you can add a build command in `package.json` to run migrations o
 
 ## Step 7: Verify
 
-Visit the production URL, sign in through Zitadel, then connect Google Calendar
+Visit the production URL, sign in through Keycloak, then connect Google Calendar
 from an admin workflow to verify the independent OAuth integration.
+
+## Keycloak server
+
+Keycloak runs on a Google Cloud free-tier VM using the files in `keycloak/`.
+
+Create the VM in the Google Cloud console with:
+
+- **Machine type:** `e2-micro`, in `us-west1`, `us-central1`, or `us-east1`
+- **Boot disk:** Debian 12, **Standard persistent disk**, 30 GB. The default
+  "Balanced" disk type is not covered by the free tier.
+- **Firewall:** allow HTTP and HTTPS traffic
+- **External IP:** reserve a static address so DNS keeps working after a
+  restart. A public IPv4 costs about $3.65/month; it is not free.
+
+Point an `A` record for `auth.dourak.app` at that IP, then on the VM:
+
+```bash
+git clone <this repo> && cd dourak/keycloak
+./setup-vm.sh            # adds swap and installs Docker; log out and back in
+cp .env.example .env     # fill in every value
+docker compose up -d --build
+```
+
+Caddy obtains the HTTPS certificate automatically once DNS resolves. The admin
+console is then at `https://auth.dourak.app`.
+
+The realm file is imported only when the realm does not exist yet. After the
+first start, change realm settings in the admin console. To serve other
+projects, add another `<realm>-realm.json` to `keycloak/realms/`.
+
+Back up the `postgres-data` Docker volume; it holds every user account.

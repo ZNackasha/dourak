@@ -238,7 +238,7 @@ export async function addUserToRoleAction(formData: FormData) {
     // First role + login status decide how much explaining the email does.
     const [priorRoles, logins] = await Promise.all([
       db.userRole.count({ where: { userId: user.id, NOT: { roleId } } }),
-      db.account.count({ where: { userId: user.id, provider: "zitadel" } }),
+      db.account.count({ where: { userId: user.id, provider: "keycloak" } }),
     ]);
     await sendRoleAddedEmail({
       email,

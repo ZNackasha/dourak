@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { safeCallbackUrl } from "@/lib/auth/callback-url";
 
 const SIGN_IN_ERRORS: Record<string, { title: string; description: string }> = {
-  zitadel: {
+  keycloak: {
     title: "Sign-in is unavailable",
     description:
       "We couldn't reach the sign-in service. Please try again in a moment.",
@@ -75,7 +75,7 @@ export default async function LoginPage({
   // is only rendered when sign-in failed and the user needs to retry.
   if (!signInError) {
     redirect(
-      `/api/auth/zitadel/login?callbackUrl=${encodeURIComponent(redirectTo)}`,
+      `/api/auth/keycloak/login?callbackUrl=${encodeURIComponent(redirectTo)}`,
     );
   }
 
@@ -108,9 +108,9 @@ export default async function LoginPage({
           </Alert>
         )}
 
-        {/* Zitadel */}
+        {/* Keycloak */}
         <a
-          href={`/api/auth/zitadel/login?callbackUrl=${encodeURIComponent(redirectTo)}`}
+          href={`/api/auth/keycloak/login?callbackUrl=${encodeURIComponent(redirectTo)}`}
           className="press-down group flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-3.5 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-xl hover:shadow-foreground/20 active:translate-y-0 active:scale-[0.98]"
         >
           <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />

@@ -6,11 +6,11 @@ import { createEmailTransport, emailFrom } from "@/lib/email";
 import { getSiteUrl } from "@/lib/site";
 
 /**
- * Upsert the application `User` (and a linked `zitadel` `Account`) from a
- * Zitadel OIDC login. Zitadel is the identity provider; the user's `sub`
+ * Upsert the application `User` (and a linked `keycloak` `Account`) from a
+ * Keycloak OIDC login. Keycloak is the identity provider; the user's `sub`
  * uniquely identifies them, and we fall back to email linking.
  */
-export async function upsertUserFromZitadel(
+export async function upsertUserFromKeycloak(
   claims: IdTokenClaims,
   tokenSet: TokenSet,
 ): Promise<{ id: string; phone: string | null }> {
@@ -26,7 +26,7 @@ export async function upsertUserFromZitadel(
   const existingAccount = await db.account.findUnique({
     where: {
       provider_providerAccountId: {
-        provider: "zitadel",
+        provider: "keycloak",
         providerAccountId: sub,
       },
     },
@@ -82,13 +82,13 @@ export async function upsertUserFromZitadel(
   await db.account.upsert({
     where: {
       provider_providerAccountId: {
-        provider: "zitadel",
+        provider: "keycloak",
         providerAccountId: sub,
       },
     },
     create: {
       userId: user.id,
-      provider: "zitadel",
+      provider: "keycloak",
       providerAccountId: sub,
       ...accountData,
     },

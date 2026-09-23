@@ -1,0 +1,4 @@
+{$KC_HOSTNAME} {
+	encode gzip
+	reverse_proxy keycloak:8080
+}

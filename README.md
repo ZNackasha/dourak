@@ -1,43 +1,47 @@
 # Dourak
 
-Volunteer coordination app built with Next.js App Router, Prisma, PostgreSQL, and Zitadel OIDC.
+Volunteer coordination app built with Next.js App Router, Prisma, PostgreSQL, and Keycloak OIDC.
 
 ## Features
 
-- **Zitadel authentication**: Sign in through the Dourak Zitadel organization.
+- **Keycloak authentication**: Sign in with Google or email through the `dourak` realm.
 - **Google Calendar integration**: Link a Google account separately to import events.
 - **Schedule management**: Create schedules and assign volunteers to event shifts.
 
 ## Prerequisites
 
 - Node 20+
-- Postgres database (Docker Compose included)
-- A Zitadel Web OIDC application
+- Docker (runs Postgres and a local Keycloak)
 - Google Cloud Project with Calendar API enabled
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and populate the provider credentials:
+Copy `.env.example` to `.env`. The Keycloak defaults already match the local
+container:
 
 ```env
 APP_URL="http://localhost:3000"
-ZITADEL_ISSUER="https://your-instance.zitadel.cloud"
-ZITADEL_CLIENT_ID="your Zitadel client id"
-ZITADEL_CLIENT_SECRET="your Zitadel client secret"
+KEYCLOAK_ISSUER="http://localhost:8181/realms/dourak"
+KEYCLOAK_CLIENT_ID="dourak"
+KEYCLOAK_CLIENT_SECRET="dourak-dev-secret"
 ```
 
-Configure the Zitadel application as a Web application using Authorization Code, PKCE, and Basic client authentication. Add these local URLs:
+The realm is defined in `keycloak/realms/dourak-realm.json` and imported on
+first start. Its Google provider reads `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET` from `.env`. Add this redirect URI to that Google OAuth
+client:
 
-- Redirect URI: `http://localhost:3000/api/auth/zitadel/callback`
-- Post-logout URI: `http://localhost:3000/`
+- `http://localhost:8181/realms/dourak/broker/google/endpoint`
 
-Google Calendar uses a separate OAuth client. Enable the Google Calendar API and add `http://localhost:3000/api/auth/google/callback` as its redirect URI.
+Google Calendar uses a separate OAuth flow. Enable the Google Calendar API and add `http://localhost:3000/api/auth/google/callback` as its redirect URI.
+
+The Keycloak admin console is at `http://localhost:8181` (`admin` / `admin`).
 
 ## Install & database setup
 
 ```bash
 npm install
-# Start local database
+# Start Postgres and Keycloak
 docker compose up -d
 # Apply migrations
 npx prisma migrate dev
@@ -53,7 +57,7 @@ Navigate to `http://localhost:3000`.
 
 ## Workflow
 
-1. Sign in through Zitadel.
+1. Sign in through Keycloak.
 2. Connect Google Calendar only when calendar access is needed.
 3. Create schedules, import events, and assign volunteers.
 
