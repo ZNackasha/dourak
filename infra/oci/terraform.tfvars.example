@@ -1,0 +1,4 @@
+tenancy_ocid   = "ocid1.tenancy.oc1..replace-me"
+region         = "us-ashburn-1"
+ssh_public_key = "ssh-ed25519 AAAA... you@laptop"
+alert_email    = "you@example.com"

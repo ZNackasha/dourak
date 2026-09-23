@@ -90,21 +90,10 @@ duplicate-content penalties, search engines must be told which domain is
 1.  Click **"Deploy"**.
 2.  Wait for the build to complete.
 
-## Step 6: Run Database Migrations
+## Step 6: Database Migrations
 
-Once the project is deployed, the database will be empty. You need to run the migrations against the production database.
-
-You can do this from your local machine by connecting to the Vercel database:
-
-1.  Install the Vercel CLI: `npm i -g vercel`
-2.  Link your local project: `vercel link`
-3.  Pull the environment variables: `vercel env pull .env.production`
-4.  Run the migration:
-    ```bash
-    npx dotenv -e .env.production -- npx prisma migrate deploy
-    ```
-
-Alternatively, you can add a build command in `package.json` to run migrations on deploy, but running them manually is safer for now.
+The build script runs `prisma migrate deploy` before `next build`, so every
+Vercel deploy applies pending migrations automatically.
 
 ## Step 7: Verify
 
@@ -113,31 +102,8 @@ from an admin workflow to verify the independent OAuth integration.
 
 ## Keycloak server
 
-Keycloak runs on a Google Cloud free-tier VM using the files in `keycloak/`.
-
-Create the VM in the Google Cloud console with:
-
-- **Machine type:** `e2-micro`, in `us-west1`, `us-central1`, or `us-east1`
-- **Boot disk:** Debian 12, **Standard persistent disk**, 30 GB. The default
-  "Balanced" disk type is not covered by the free tier.
-- **Firewall:** allow HTTP and HTTPS traffic
-- **External IP:** reserve a static address so DNS keeps working after a
-  restart. A public IPv4 costs about $3.65/month; it is not free.
-
-Point an `A` record for `auth.dourak.app` at that IP, then on the VM:
-
-```bash
-git clone <this repo> && cd dourak/keycloak
-./setup-vm.sh            # adds swap and installs Docker; log out and back in
-cp .env.example .env     # fill in every value
-docker compose up -d --build
-```
-
-Caddy obtains the HTTPS certificate automatically once DNS resolves. The admin
-console is then at `https://auth.dourak.app`.
-
-The realm file is imported only when the realm does not exist yet. After the
-first start, change realm settings in the admin console. To serve other
-projects, add another `<realm>-realm.json` to `keycloak/realms/`.
-
-Back up the `postgres-data` Docker volume; it holds every user account.
+Keycloak runs on Oracle Cloud's Always Free tier, with a managed MySQL HeatWave
+database. The infrastructure is defined with OpenTofu in `infra/oci/`, and the
+container setup lives in `keycloak/`. Follow
+[infra/oci/README.md](infra/oci/README.md) for setup, automatic maintenance,
+and recovery.

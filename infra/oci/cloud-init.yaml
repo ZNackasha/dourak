@@ -1,0 +1,48 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - mysql-client
+  - unattended-upgrades
+
+write_files:
+  - path: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    content: |
+      Unattended-Upgrade::Allowed-Origins:: "Docker:${distro_codename}";
+      Unattended-Upgrade::Automatic-Reboot "true";
+      Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+  - path: /etc/systemd/system/keycloak-update.service
+    content: |
+      [Unit]
+      Description=Refresh Keycloak and Caddy to their latest patch images
+      ConditionPathExists=/home/ubuntu/keycloak/docker-compose.yml
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Type=oneshot
+      WorkingDirectory=/home/ubuntu/keycloak
+      ExecStart=/usr/bin/docker compose pull --ignore-buildable
+      ExecStart=/usr/bin/docker compose up -d --build
+      ExecStart=/usr/bin/docker image prune -f
+  - path: /etc/systemd/system/keycloak-update.timer
+    content: |
+      [Unit]
+      Description=Weekly Keycloak image refresh
+
+      [Timer]
+      OnCalendar=Sun 05:00
+      RandomizedDelaySec=1h
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+runcmd:
+  # Oracle's Ubuntu images reject everything but SSH in iptables, on top of the VCN security list.
+  - iptables -I INPUT 1 -p tcp -m state --state NEW -m multiport --dports 80,443 -j ACCEPT
+  - netfilter-persistent save
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - systemctl daemon-reload
+  - systemctl enable --now keycloak-update.timer

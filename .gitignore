@@ -37,6 +37,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# opentofu
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
