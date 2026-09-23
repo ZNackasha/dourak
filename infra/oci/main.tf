@@ -209,11 +209,7 @@ resource "oci_mysql_mysql_db_system" "keycloak" {
   data_storage_size_in_gb = 50
   is_highly_available     = false
 
-  backup_policy {
-    is_enabled        = true
-    retention_in_days = 7
-  }
-
+  # Always Free systems reject a custom backup_policy; Oracle applies its own.
   deletion_policy {
     is_delete_protected = true
   }
