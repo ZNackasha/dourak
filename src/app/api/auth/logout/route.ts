@@ -26,13 +26,15 @@ async function handle(req: NextRequest) {
       id_token_hint: idToken ?? undefined,
       post_logout_redirect_uri: `${appUrl()}/`,
     });
-    return NextResponse.redirect(endSessionUrl);
+    // 303 so the sign-out form's POST becomes a GET; a 307 would re-POST to
+    // Keycloak, which then ignores these query params and asks to confirm.
+    return NextResponse.redirect(endSessionUrl, 303);
   } catch (err) {
     console.error(
       "Keycloak end-session failed, clearing local session only",
       err,
     );
-    return NextResponse.redirect(home);
+    return NextResponse.redirect(home, 303);
   }
 }
 
